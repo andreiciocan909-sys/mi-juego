@@ -171,13 +171,6 @@
       border: .4vw solid rgba(255,255,255,.4); border-radius: 8vw; background: rgba(19,32,52,.97);
       text-align: center; font-size: clamp(17px, 5vw, 22px); font-weight: 900; line-height: 1.4;
     }
-    .loading-screen { position: fixed; z-index: 40; inset: 0; display: grid; place-items: center; padding: max(6vw,env(safe-area-inset-top)) max(6vw,env(safe-area-inset-right)) max(6vw,env(safe-area-inset-bottom)) max(6vw,env(safe-area-inset-left)); background: linear-gradient(155deg,#74caff,#ffcb84 68%,#273652); }
-    .loading-card { width: min(100%,420px); padding: clamp(22px,7vw,34px); border: 2px solid rgba(255,255,255,.55); border-radius: 28px; text-align: center; background: rgba(18,31,55,.88); box-shadow: 0 1em 2em rgba(15,31,51,.3),inset 0 1px rgba(255,255,255,.2); }
-    .loading-title { margin: 0 0 .3em; font-size: clamp(24px,8vw,38px); font-weight: 1000; }
-    .loading-copy { margin: 0 0 1em; color: #e2edf9; font-size: clamp(12px,3.5vw,15px); font-weight: 800; }
-    .loading-track { height: 16px; overflow: hidden; border: 2px solid rgba(255,255,255,.45); border-radius: 99px; background: rgba(0,0,0,.25); }
-    .loading-fill { width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg,#fff16a,#ff9e45,#fb5680); box-shadow: 0 0 14px rgba(255,227,106,.7); transition: width .16s ease; }
-    .loading-percent { display: block; margin-top: .6em; color: #ffeb88; font-size: 16px; font-weight: 1000; }
     .manager-card {
       display: none; position: absolute; z-index: 3; inset: 5% 4%; padding: clamp(12px, 2.3vh, 18px) 3vw;
       border: .35vw solid rgba(255,255,255,.5); border-radius: clamp(20px, 5vw, 28px);
@@ -204,7 +197,6 @@
     .offer-row,.chest-list { display: flex; flex-direction: column; gap: clamp(6px, 1vh, 9px); }
     .shop-boxes { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 1vw; }
     .offer-card,.shop-box-card,.chest-card { min-height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 2vw; padding: .45em 2.3vw; border: .3vw solid rgba(255,255,255,.24); border-radius: 15px; background: rgba(255,255,255,.09); }
-    .offer-thumb { flex: 0 0 auto; width: clamp(38px,11vw,48px); aspect-ratio: 1; border-radius: 10px; object-fit: cover; background: rgba(255,255,255,.1); }
     .shop-box-card { min-width: 0; flex-direction: column; justify-content: center; gap: .25em; padding: .3em .7vw; text-align: center; }
     .shop-box-card small { display: none; }
     .shop-box-card .mini-action { min-width: 0; width: 100%; padding: .2em .5vw; }
@@ -230,10 +222,6 @@
     .box-visual { font-size: clamp(65px,22vw,100px); filter: drop-shadow(0 .2em .3em rgba(255,204,61,.5)); }
     .box-visual.shaking { animation: boxShake .16s ease-in-out infinite alternate; }
     .reward-line { min-height: 2.5em; color: #fff1a1; font-size: clamp(14px,4vw,18px); font-weight: 1000; }
-    .reward-portraits { display: flex; justify-content: center; gap: 2vw; margin: .25em 0 .4em; }
-    .reward-portrait { display: flex; min-width: 0; flex-direction: column; align-items: center; gap: .2em; color: #fff; font-size: clamp(9px,2.5vw,11px); }
-    .reward-portrait img { width: clamp(54px,16vw,72px); aspect-ratio: 1; object-fit: cover; border-radius: 14px; border: 2px solid rgba(255,255,255,.6); background: rgba(255,255,255,.1); }
-    .reward-coins { display: block; color: #fff1a1; }
     @keyframes boxShake { from { transform: rotate(-7deg) scale(.96); } to { transform: rotate(7deg) scale(1.05); } }
     .hidden { display: none !important; }
     @keyframes skyFlow { 0%,100% { background-position: 0% 30%; } 50% { background-position: 100% 70%; } }
@@ -363,15 +351,6 @@
     </footer>
   </main>
 
-  <section class="loading-screen" id="loadingScreen" aria-live="polite">
-    <div class="loading-card">
-      <h1 class="loading-title">BRAINROT CLASH</h1>
-      <p class="loading-copy" id="loadingCopy">Preparando personajes y arenas…</p>
-      <div class="loading-track"><div class="loading-fill" id="loadingFill"></div></div>
-      <span class="loading-percent" id="loadingPercent">0%</span>
-    </div>
-  </section>
-
   <script>
   (() => {
     'use strict';
@@ -449,7 +428,6 @@
 
     const T = window.THREE;
     if (!T) {
-      $('loadingScreen').classList.add('hidden');
       $('fallback').classList.remove('hidden');
       $('menuControls').classList.add('hidden');
       return;
@@ -459,12 +437,6 @@
     const materialCache = Object.create(null);
     const characterTemplates = [];
     const portraitImages = [];
-    const characterCanvases = [];
-    const characterWhiteCanvases = [];
-    const characterTextures = [];
-    const characterWhiteTextures = [];
-    const characterAspects = [];
-    const arenaCanvases = [];
     const floorTextures = [];
     const skyTextures = [];
     const arenaGroundMaterials = [];
@@ -487,6 +459,7 @@
     let keyLight = null;
     let fillLight = null;
     let outlineMaterial = null;
+    let portraitRenderer = null;
     let boardGroup = null;
     let playerPreviewGroup = null;
     let enemyPreviewGroup = null;
@@ -637,234 +610,159 @@
       return mesh;
     }
     function createCharacterTemplate(id) {
-      const root = new T.Group();
-      root.name = 'character-' + id;
-      root.scale.setScalar(.48);
-
-      const shadow = new T.Mesh(geometry('unit-shadow', () => new T.CircleGeometry(.9, 14)), new T.MeshBasicMaterial({
-        color: '#142337', map: glowTexture, transparent: true, opacity: .5, depthWrite: false
-      }));
-      shadow.name = 'groundShadow';
-      shadow.rotation.x = -Math.PI / 2;
-      shadow.position.y = .025;
-      shadow.scale.set(1.1, .72, 1);
-      root.add(shadow);
-
-      const height = 2.12 + id * .055;
-      const width = height * (characterAspects[id] || .82);
-      const sprite = new T.Sprite(new T.SpriteMaterial({
-        map: characterTextures[id], transparent: true, alphaTest: .012, depthWrite: false
-      }));
-      sprite.name = 'characterSprite';
-      sprite.center.set(.5, .025);
-      sprite.position.y = .05;
-      sprite.scale.set(width, height, 1);
-      sprite.renderOrder = 2;
-      root.add(sprite);
-
-      const flash = new T.Sprite(new T.SpriteMaterial({
-        map: characterWhiteTextures[id], transparent: true, alphaTest: .012, opacity: 0,
-        depthWrite: false, depthTest: false
-      }));
-      flash.name = 'hitGlow';
-      flash.center.copy(sprite.center);
-      flash.position.set(0, .052, .01);
-      flash.scale.set(width, height, 1);
-      flash.renderOrder = 4;
-      flash.visible = false;
-      root.add(flash);
-
-      if (id >= 6) {
-        const aura = new T.Mesh(torusGeo(), new T.MeshBasicMaterial({
-          color: CHARACTERS[id].accent, transparent: true, opacity: .42,
-          blending: T.AdditiveBlending, depthWrite: false
-        }));
-        aura.name = 'auraRing';
-        aura.rotation.x = Math.PI / 2;
-        aura.position.y = .075;
-        aura.scale.set(1.32, 1.32, 1.32);
-        root.add(aura);
+      const c = CHARACTERS[id];
+      const root = new T.Group(); root.name = 'character-' + id;
+      const body = new T.Group(); body.name = 'bodyRig'; root.add(body);
+      const arms = [];
+      for (let side = -1; side <= 1; side += 2) {
+        const arm = new T.Group(); arm.name = side < 0 ? 'leftArm' : 'rightArm'; arm.position.set(side * .38, .82, 0); body.add(arm); arms.push(arm);
+        addCylinder(arm, c.suit, [0, -.12, 0], [.17, .4, .17], [0, 0, side * .22]);
+        addSphere(arm, id < 2 ? '#ef465b' : c.accent, [0, -.34, .07], id < 2 ? [.25,.24,.25] : [.19,.18,.19], .5);
       }
-
-      const trail = new T.Mesh(geometry('charge-trail', () => new T.TorusGeometry(.5, .08, 4, 12)), new T.MeshBasicMaterial({
-        color: '#a7f4ff', transparent: true, opacity: .68, blending: T.AdditiveBlending, depthWrite: false
-      }));
-      trail.name = 'chargeTrail';
-      trail.rotation.x = Math.PI / 2;
-      trail.position.y = .16;
-      trail.visible = false;
-      root.add(trail);
+      for (let side = -1; side <= 1; side += 2) {
+        const leg = new T.Group(); leg.name = side < 0 ? 'leftLeg' : 'rightLeg'; leg.position.set(side * .18, .28, 0); body.add(leg);
+        addCylinder(leg, c.suit, [0, -.09, 0], [.19,.32,.19]);
+        addBox(leg, id === 6 ? '#ef5149' : '#26374c', [0,-.24,.11], [.29,.15,.38], null,.7);
+      }
+      if (id === 0) {
+        outlinedSphere(body, '#ffd833', [0,.75,0], [.61,.62,.5]);
+        outlinedSphere(body, '#ffe46a', [0,1.34,0], [.54,.48,.46]);
+        addCone(body, '#f17b32', [0,1.25,.46], [.2,.18,.17], [Math.PI/2,0,0]);
+        for (let i=0;i<3;i++) addCone(body,'#f0513f',[-.17+i*.17,1.81,0],[.12,.25,.12]);
+        addSphere(body,'#fff8ed',[-.17,1.4,.39],[.1,.12,.06]); addSphere(body,'#fff8ed',[.17,1.4,.39],[.1,.12,.06]);
+        addSphere(body,'#243044',[-.16,1.4,.44],[.045,.07,.03]); addSphere(body,'#243044',[.16,1.4,.44],[.045,.07,.03]);
+        for (let i=0;i<2;i++) addSphere(body,'#f6b335',[i? .45:-.45,.72,.02],[.23,.2,.26]);
+      } else if (id === 1) {
+        outlinedSphere(body,'#f5bf2c',[0,.72,0],[.45,.63,.38]);
+        addSphere(body,'#ffe35b',[0,1.14,0],[.4,.58,.37]); addSphere(body,'#f5cf42',[.12,1.55,-.02],[.31,.33,.3]);
+        addCone(body,'#b78423',[.1,1.83,0],[.13,.28,.13],[0,0,.16]);
+        addSphere(body,'#fff8ed',[-.12,1.34,.31],[.09,.12,.05]); addSphere(body,'#fff8ed',[.15,1.34,.31],[.09,.12,.05]);
+        addSphere(body,'#243044',[-.12,1.34,.36],[.04,.065,.025]); addSphere(body,'#243044',[.15,1.34,.36],[.04,.065,.025]);
+        addBox(body,'#f7e9be',[0,.53,.35],[.66,.13,.08]);
+        addSphere(arms[0],'#e9485e',[0,-.35,.05],[.3,.3,.3]); addSphere(arms[1],'#446ce6',[0,-.35,.05],[.3,.3,.3]);
+      } else if (id === 2) {
+        outlinedSphere(body,'#646672',[0,.72,0],[.7,.62,.53]);
+        outlinedSphere(body,'#a2a3ac',[0,1.37,0],[.55,.47,.48]);
+        addCone(body,'#595b67',[-.34,1.77,-.02],[.28,.46,.24],[0,0,.2]); addCone(body,'#595b67',[.34,1.77,-.02],[.28,.46,.24],[0,0,-.2]);
+        addCone(body,'#ed9aaa',[-.34,1.78,.12],[.13,.23,.12],[0,0,.2]); addCone(body,'#ed9aaa',[.34,1.78,.12],[.13,.23,.12],[0,0,-.2]);
+        addBox(body,'#fff0cc',[0,.58,.41],[.87,.15,.1]); addBox(body,'#e4a43c',[0,.58,.48],[.18,.18,.06]);
+        addSphere(body,'#fff8ed',[-.19,1.43,.42],[.1,.12,.055]); addSphere(body,'#fff8ed',[.19,1.43,.42],[.1,.12,.055]);
+      } else if (id === 3) {
+        outlinedSphere(body,'#6b478e',[0,.72,0],[.44,.62,.37]); outlinedSphere(body,'#f0d5b8',[0,1.35,0],[.48,.44,.42]);
+        addSphere(body,'#dddde4',[0,1.71,-.08],[.4,.23,.37]); addSphere(body,'#f5f2ed',[0,1.83,-.12],[.22,.2,.24]);
+        addBox(body,'#ee6aa8',[0,1.55,.36],[.92,.13,.1]); addCone(body,'#f7cf56',[0,1.54,.45],[.12,.17,.08],[Math.PI/2,0,0]);
+        addCylinder(body,'#74512d',[.65,.78,0],[.075,1.18,.075],[0,0,-.12]); addSphere(body,'#d8c18b',[.65,1.38,0],[.14,.14,.14]);
+        addSphere(body,'#fff8ed',[-.15,1.4,.36],[.09,.11,.05]); addSphere(body,'#fff8ed',[.15,1.4,.36],[.09,.11,.05]);
+      } else if (id === 4) {
+        outlinedCylinder(body,'#8f5732',[0,.9,0],[.58,1.15,.58]); outlinedSphere(body,'#aa7045',[0,1.48,.04],[.48,.43,.42]);
+        addBox(body,'#68432d',[0,.47,.31],[.68,.18,.12]);
+        addSphere(body,'#fff5d9',[-.17,1.55,.4],[.13,.15,.07]); addSphere(body,'#fff5d9',[.17,1.55,.4],[.13,.15,.07]);
+        addSphere(body,'#252b39',[-.16,1.55,.46],[.055,.09,.035]); addSphere(body,'#252b39',[.16,1.55,.46],[.055,.09,.035]);
+        addCylinder(body,'#6d432a',[.7,.9,-.05],[.09,1.2,.09],[0,0,-.62]); addSphere(body,'#d3a35b',[.1,1.88,.03],[.12,.13,.12]);
+        for(let i=0;i<3;i++) addBox(body,'#bf8757',[-.28+i*.28,.94,.43],[.035,.66,.025]);
+      } else if (id === 5) {
+        outlinedBox(body,'#459c56',[0,.8,0],[.83,.67,.65]);
+        outlinedBox(body,'#66b85e',[0,1.12,.4],[.84,.36,.42]);
+        addBox(body,'#2e7547',[0,.68,.68],[.8,.18,.08]);
+        addSphere(body,'#fff16b',[-.2,1.35,.56],[.13,.13,.08]); addSphere(body,'#fff16b',[.2,1.35,.56],[.13,.13,.08]);
+        addSphere(body,'#27394a',[-.2,1.36,.62],[.055,.07,.03]); addSphere(body,'#27394a',[.2,1.36,.62],[.055,.07,.03]);
+        for(let i=0;i<3;i++) addBox(body,'#f9f0d9',[-.18+i*.18,.85,.72],[.09,.1,.04]);
+        addBox(body,'#dce7e8',[-.58,.87,-.03],[.85,.11,.42],null,.4,.1); addBox(body,'#dce7e8',[.58,.87,-.03],[.85,.11,.42],null,.4,.1);
+        for(let i=0;i<2;i++) { addCylinder(body,'#3e5666',[i? .31:-.31,.52,-.44],[.08,.34,.08]); addSphere(body,'#f5c94f',[i? .31:-.31,.31,-.44],[.14,.18,.14]); }
+        addSphere(body,'#a83f31',[-.43,.39,-.24],[.18,.2,.18]); addSphere(body,'#a83f31',[.43,.39,-.24],[.18,.2,.18]);
+      } else if (id === 6) {
+        outlinedSphere(body,'#288fc2',[0,.78,0],[.58,.57,.48]); outlinedSphere(body,'#59c6df',[0,1.28,.15],[.52,.41,.55]);
+        addCone(body,'#3189c2',[0,1.7,-.16],[.24,.54,.22]);
+        addSphere(body,'#f4f0df',[0,1.2,.59],[.3,.18,.16]);
+        addSphere(body,'#fff',[ -.14,1.4,.59],[.09,.1,.045]); addSphere(body,'#fff',[.14,1.4,.59],[.09,.1,.045]);
+        addSphere(body,'#26364b',[-.14,1.4,.63],[.04,.06,.03]); addSphere(body,'#26364b',[.14,1.4,.63],[.04,.06,.03]);
+        for(let i=0;i<2;i++) addCone(body,'#2b82be',[i? .44:-.44,.92,-.1],[.31,.58,.2],[0,0,i?-.95:.95]);
+        for(let i=0;i<3;i++) { const x=-.36+i*.36; addCylinder(body,'#4baed0',[x,.34,-.02],[.12,.43,.12]); addBox(body,'#ed514b',[x,.1,.12],[.27,.14,.38]); }
+      } else if (id === 7) {
+        outlinedCylinder(body,'#b87948',[0,.86,0],[.69,.9,.69]);
+        addCylinder(body,'#f4d9ae',[0,1.34,0],[.73,.17,.73],null,.45); addCylinder(body,'#563e38',[0,1.45,0],[.55,.09,.55],null,.38);
+        const handle = new T.Mesh(torusGeo(),material('#f4d9ae',.45)); handle.position.set(.46,.88,0); handle.rotation.y=Math.PI/2; handle.scale.set(.32,.36,.22); body.add(handle);
+        addSphere(body,'#fff5df',[-.16,1.05,.34],[.1,.12,.06]); addSphere(body,'#fff5df',[.16,1.05,.34],[.1,.12,.06]);
+        addSphere(body,'#293747',[-.15,1.05,.39],[.045,.07,.03]); addSphere(body,'#293747',[.15,1.05,.39],[.045,.07,.03]);
+        addCylinder(body,'#b9d4e3',[0,1.79,-.03],[.055,.34,.055],[0,0,.16]); addCylinder(body,'#dceaf2',[.18,1.98,-.04],[.05,.22,.05],[0,0,-.22]);
+        addCone(arms[1],'#dfe9f0',[0,-.31,.18],[.13,.68,.08],[Math.PI/2,0,0]); addSphere(arms[1],'#d8e1e8',[0,-.65,.18],[.11,.1,.1]);
+      } else if (id === 8) {
+        outlinedSphere(body,'#c83b39',[0,.75,0],[.51,.62,.44]); outlinedSphere(body,'#ed5948',[0,1.38,.02],[.56,.46,.46]);
+        addCone(body,'#f8bd47',[-.3,1.83,-.03],[.18,.4,.17],[0,0,.2]); addCone(body,'#f8bd47',[.3,1.83,-.03],[.18,.4,.17],[0,0,-.2]);
+        addCone(body,'#ffb54b',[0,1.28,.48],[.2,.24,.18],[Math.PI/2,0,0]);
+        addSphere(body,'#fff',[-.19,1.45,.4],[.12,.14,.06]); addSphere(body,'#fff',[.19,1.45,.4],[.12,.14,.06]);
+        addSphere(body,'#273044',[-.17,1.46,.45],[.06,.09,.03]); addSphere(body,'#273044',[.21,1.46,.45],[.06,.09,.03]);
+        addCone(body,'#bd3436',[-.65,1.15,-.15],[.67,.83,.16],[0,0,-1.12]); addCone(body,'#bd3436',[.65,1.15,-.15],[.67,.83,.16],[0,0,1.12]);
+        addCone(body,'#ab2d34',[0,.38,-.47],[.26,.63,.21],[Math.PI/2,0,0]); addSphere(body,'#ed5948',[0,.45,-.72],[.19,.2,.19]);
+      } else {
+        outlinedCylinder(body,'#b8793d',[0,.88,0],[.6,1.05,.6]); outlinedSphere(body,'#ffe66a',[0,1.55,0],[.45,.43,.43]);
+        for(let i=0;i<3;i++) addCone(body,'#fff080',[-.28+i*.28,1.92,-.03],[.17,.44,.16],[0,0,(i-1)*-.13],.36);
+        addBox(body,'#405dab',[0,.86,-.39],[.72,.89,.1],null,.45,.05);
+        addBox(body,'#f7c653',[0,.56,.34],[.72,.18,.12]);
+        addSphere(body,'#fff',[-.15,1.62,.37],[.1,.12,.055]); addSphere(body,'#fff',[.15,1.62,.37],[.1,.12,.055]);
+        addSphere(body,'#34456e',[-.14,1.62,.41],[.04,.07,.03]); addSphere(body,'#34456e',[.16,1.62,.41],[.04,.07,.03]);
+        addCone(body,'#9cf4ff',[-.54,1.1,.02],[.19,.56,.16],[0,0,.22],.3); addCone(body,'#9cf4ff',[.54,1.1,.02],[.19,.56,.16],[0,0,-.22],.3);
+      }
+      const shadow = new T.Mesh(geometry('unit-shadow',() => new T.CircleGeometry(.9,14)),new T.MeshBasicMaterial({color:'#142337',map:glowTexture,transparent:true,opacity:.52,depthWrite:false}));
+      shadow.name='groundShadow'; shadow.rotation.x=-Math.PI/2; shadow.position.y=.025; root.add(shadow);
+      if(id>=6) { const aura=new T.Mesh(torusGeo(),new T.MeshBasicMaterial({color:c.accent,transparent:true,opacity:.44,blending:T.AdditiveBlending,depthWrite:false})); aura.name='auraRing'; aura.rotation.x=Math.PI/2; aura.position.y=.08; aura.scale.set(1.25,1.25,1.25); root.add(aura); }
+      const flash=new T.Mesh(sphereGeo(),new T.MeshBasicMaterial({color:'#fff4a4',transparent:true,opacity:.18,blending:T.AdditiveBlending,depthWrite:false})); flash.name='hitGlow'; flash.position.y=.88; flash.scale.set(1.35,1.55,1.2); flash.visible=false; root.add(flash);
+      const trail=new T.Mesh(geometry('charge-trail',() => new T.TorusGeometry(.5,.08,4,12)),new T.MeshBasicMaterial({color:'#a7f4ff',transparent:true,opacity:.62,blending:T.AdditiveBlending,depthWrite:false})); trail.name='chargeTrail'; trail.rotation.x=Math.PI/2; trail.position.y=.16; trail.visible=false; root.add(trail);
+      root.scale.setScalar(.48);
       return root;
     }
-
-    // Se conserva una plantilla por personaje; cada unidad clona sus sprites y efectos.
+    function outlinedCylinder(parent,color,position,scale) {
+      const mesh=addCylinder(parent,color,position,scale,null,.7);
+      const outline=new T.Mesh(mesh.geometry,outlineMaterial); outline.position.copy(mesh.position); outline.scale.copy(mesh.scale).multiplyScalar(1.035); outline.renderOrder=1; parent.add(outline); return mesh;
+    }
+    // Los templates se construyen una vez; cada aparición reutiliza las mallas al clonar el grupo.
     function buildCharacter(id) {
-      if (!characterTemplates[id]) characterTemplates[id] = createCharacterTemplate(id);
-      const clone = characterTemplates[id].clone(true);
-      const sprite = clone.getObjectByName('characterSprite');
-      const flash = clone.getObjectByName('hitGlow');
-      const aura = clone.getObjectByName('auraRing');
-      const trail = clone.getObjectByName('chargeTrail');
-      if (sprite) sprite.material = sprite.material.clone();
-      if (flash) flash.material = flash.material.clone();
-      if (aura) aura.material = aura.material.clone();
-      if (trail) trail.material = trail.material.clone();
+      if (!characterTemplates[id]) characterTemplates[id]=createCharacterTemplate(id);
+      const clone=characterTemplates[id].clone(true);
+      const aura=clone.getObjectByName('auraRing'); if(aura) aura.material=aura.material.clone();
       return clone;
     }
 
-    function fitCanvas(image) {
-      const sourceWidth = image.naturalWidth || image.width;
-      const sourceHeight = image.naturalHeight || image.height;
-      const ratio = Math.min(1, 512 / Math.max(sourceWidth, sourceHeight));
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.max(1, Math.round(sourceWidth * ratio));
-      canvas.height = Math.max(1, Math.round(sourceHeight * ratio));
-      canvas.getContext('2d', { willReadFrequently: true }).drawImage(image, 0, 0, canvas.width, canvas.height);
-      return canvas;
-    }
-    function characterFallbackCanvas(character) {
-      const canvas = document.createElement('canvas');
-      canvas.width = 256; canvas.height = 256;
-      const ctx = canvas.getContext('2d');
-      ctx.clearRect(0, 0, 256, 256);
-      ctx.fillStyle = character.color;
-      ctx.beginPath(); ctx.arc(128, 124, 108, 0, Math.PI * 2); ctx.fill();
-      ctx.lineWidth = 9; ctx.strokeStyle = 'rgba(24,35,52,.8)'; ctx.stroke();
-      ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.font = '900 27px system-ui, sans-serif';
-      const words = character.name.split(' ');
-      const lines = [];
-      let line = '';
-      for (let i = 0; i < words.length; i++) {
-        const candidate = line ? line + ' ' + words[i] : words[i];
-        if (candidate.length > 13 && line) { lines.push(line); line = words[i]; }
-        else line = candidate;
+    function makeFloorTexture(arena) {
+      const canvas=document.createElement('canvas'); canvas.width=128; canvas.height=128;
+      const ctx=canvas.getContext('2d'); ctx.fillStyle=arena.floor; ctx.fillRect(0,0,128,128);
+      if(arena.scene==='farm') {
+        ctx.fillStyle='rgba(244,255,188,.12)';
+        for(let y=0;y<128;y+=16) for(let x=0;x<128;x+=16) if((x+y)%32===0) ctx.fillRect(x,y,8,8);
+        ctx.strokeStyle='rgba(48,115,58,.22)'; ctx.lineWidth=2;
+        for(let i=0;i<28;i++){const x=(i*37)%128,y=(i*61)%128;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+2,y-6);ctx.stroke();}
+      } else if(arena.scene==='beach') {
+        ctx.fillStyle='rgba(255,250,212,.22)'; for(let i=0;i<150;i++){ctx.beginPath();ctx.arc((i*43)%128,(i*71)%128,1+(i%3),0,Math.PI*2);ctx.fill();}
+        ctx.strokeStyle='rgba(35,158,186,.12)'; for(let y=24;y<128;y+=32){ctx.beginPath();ctx.moveTo(0,y);ctx.quadraticCurveTo(64,y-9,128,y);ctx.stroke();}
+      } else if(arena.scene==='desert') {
+        ctx.strokeStyle='rgba(255,235,166,.2)'; ctx.lineWidth=5; for(let y=12;y<128;y+=28){ctx.beginPath();ctx.moveTo(0,y);ctx.quadraticCurveTo(64,y-10,128,y+2);ctx.stroke();}
+        ctx.fillStyle='rgba(123,76,43,.16)'; for(let i=0;i<24;i++) ctx.fillRect((i*31)%128,(i*53)%128,2,2);
+      } else if(arena.scene==='city'||arena.scene==='stadium') {
+        ctx.strokeStyle='rgba(255,255,255,.2)'; ctx.lineWidth=2; for(let n=0;n<=128;n+=32){ctx.beginPath();ctx.moveTo(n,0);ctx.lineTo(n,128);ctx.moveTo(0,n);ctx.lineTo(128,n);ctx.stroke();}
+        ctx.fillStyle='rgba(255,255,255,.08)'; for(let y=5;y<128;y+=32) for(let x=5;x<128;x+=32) ctx.fillRect(x,y,20,20);
+      } else {
+        ctx.strokeStyle='rgba(255,187,67,.23)'; ctx.lineWidth=3;
+        for(let i=0;i<14;i++){const x=(i*37)%128,y=(i*59)%128;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+8,y+9);ctx.lineTo(x+3,y+18);ctx.stroke();}
       }
-      if (line) lines.push(line);
-      const startY = 124 - (lines.length - 1) * 17;
-      for (let i = 0; i < lines.length; i++) ctx.fillText(lines[i], 128, startY + i * 34, 206);
-      return canvas;
+      const texture=new T.CanvasTexture(canvas); texture.wrapS=T.RepeatWrapping; texture.wrapT=T.RepeatWrapping; texture.repeat.set(7,7); texture.encoding=T.sRGBEncoding;
+      return texture;
     }
-    function arenaFallbackCanvas(arena) {
-      const canvas = document.createElement('canvas');
-      canvas.width = 512; canvas.height = 512;
-      const ctx = canvas.getContext('2d');
-      const gradient = ctx.createLinearGradient(0, 0, 0, 512);
-      gradient.addColorStop(0, arena.skyA); gradient.addColorStop(.6, arena.skyB); gradient.addColorStop(1, arena.floor);
-      ctx.fillStyle = gradient; ctx.fillRect(0, 0, 512, 512);
-      ctx.fillStyle = arena.dark; ctx.beginPath(); ctx.moveTo(0, 330); ctx.lineTo(135, 235); ctx.lineTo(240, 330); ctx.lineTo(380, 220); ctx.lineTo(512, 325); ctx.lineTo(512, 512); ctx.lineTo(0, 512); ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,.78)'; ctx.textAlign = 'center'; ctx.font = '900 32px system-ui, sans-serif';
-      ctx.fillText(arena.name, 256, 82, 460);
-      return canvas;
-    }
-    function chromaKeyCharacter(canvas) {
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const pixels = image.data;
-      for (let i = 0; i < pixels.length; i += 4) {
-        const r = pixels[i], g = pixels[i + 1], b = pixels[i + 2];
-        const greenDominance = g - Math.max(r, b);
-        if (g > 72 && greenDominance > 24) {
-          const distance = Math.sqrt(r * r + (255 - g) * (255 - g) + b * b);
-          const edge = clamp((distance - 18) / 62, 0, 1);
-          const smooth = edge * edge * (3 - 2 * edge);
-          pixels[i + 3] = Math.round(pixels[i + 3] * smooth);
-          const spill = Math.max(0, Math.min(g - r, g - b));
-          pixels[i + 1] = Math.max(0, Math.round(g - spill * (1 - smooth) * .72));
-        }
-      }
-      ctx.putImageData(image, 0, 0);
-      return canvas;
-    }
-    function makeWhiteAlphaCanvas(canvas) {
-      const white = document.createElement('canvas');
-      white.width = canvas.width; white.height = canvas.height;
-      const ctx = white.getContext('2d', { willReadFrequently: true });
-      ctx.drawImage(canvas, 0, 0);
-      const image = ctx.getImageData(0, 0, white.width, white.height);
-      const pixels = image.data;
-      for (let i = 0; i < pixels.length; i += 4) { pixels[i] = 255; pixels[i + 1] = 255; pixels[i + 2] = 255; }
-      ctx.putImageData(image, 0, 0);
-      return white;
-    }
-    function loadImage(path) {
-      return new Promise((resolve) => {
-        const image = new Image();
-        let finished = false;
-        const done = (value) => { if (finished) return; finished = true; clearTimeout(timeout); resolve(value); };
-        const timeout = setTimeout(() => done(null), 10000);
-        image.onload = () => done(image);
-        image.onerror = () => done(null);
-        image.src = path;
-      });
-    }
-    function updateLoading(done, total, label) {
-      const percent = Math.round(done / total * 100);
-      $('loadingFill').style.width = percent + '%';
-      $('loadingPercent').textContent = percent + '%';
-      $('loadingCopy').textContent = label || 'Preparando personajes y arenas…';
-    }
-    async function preloadAssets() {
-      const total = CHARACTERS.length + ARENAS.length;
-      let done = 0;
-      updateLoading(0, total, 'Cargando imágenes…');
-      const tasks = [];
-      for (let i = 0; i < CHARACTERS.length; i++) {
-        tasks.push((async (index) => {
-          let canvas = null;
-          const image = await loadImage('assets/personaje' + (index + 1) + '.png');
-          if (image) {
-            try { canvas = chromaKeyCharacter(fitCanvas(image)); } catch (_) { canvas = null; }
-          }
-          if (!canvas) canvas = characterFallbackCanvas(CHARACTERS[index]);
-          characterCanvases[index] = canvas;
-          characterWhiteCanvases[index] = makeWhiteAlphaCanvas(canvas);
-          characterAspects[index] = canvas.width / canvas.height;
-          try { portraitImages[index] = canvas.toDataURL('image/png'); } catch (_) { portraitImages[index] = ''; }
-          done++;
-          updateLoading(done, total, 'Personajes ' + Math.min(index + 1, CHARACTERS.length) + ' de ' + CHARACTERS.length);
-        })(i));
-      }
-      for (let i = 0; i < ARENAS.length; i++) {
-        tasks.push((async (index) => {
-          let canvas = null;
-          const image = await loadImage('assets/arena' + (index + 1) + '.png');
-          if (image) { try { canvas = fitCanvas(image); } catch (_) { canvas = null; } }
-          arenaCanvases[index] = canvas || arenaFallbackCanvas(ARENAS[index]);
-          done++;
-          updateLoading(done, total, 'Arenas ' + Math.min(index + 1, ARENAS.length) + ' de ' + ARENAS.length);
-        })(i));
-      }
-      await Promise.all(tasks);
-      updateLoading(total, total, '¡Todo listo!');
-      await new Promise((resolve) => setTimeout(resolve, 220));
-      $('loadingScreen').classList.add('hidden');
-    }
-    function prepareCharacterTextures() {
-      for (let i = 0; i < CHARACTERS.length; i++) {
-        characterTextures[i] = new T.CanvasTexture(characterCanvases[i]);
-        characterTextures[i].encoding = T.sRGBEncoding;
-        characterTextures[i].minFilter = T.LinearMipmapLinearFilter;
-        characterWhiteTextures[i] = new T.CanvasTexture(characterWhiteCanvases[i]);
-        characterWhiteTextures[i].encoding = T.sRGBEncoding;
-        characterWhiteTextures[i].minFilter = T.LinearMipmapLinearFilter;
-      }
+    function makeSkyTexture(arena) {
+      const canvas=document.createElement('canvas'); canvas.width=4; canvas.height=128;
+      const ctx=canvas.getContext('2d'); const gradient=ctx.createLinearGradient(0,0,0,128);
+      gradient.addColorStop(0,arena.skyA); gradient.addColorStop(.62,arena.skyB); gradient.addColorStop(1,arena.dark);
+      ctx.fillStyle=gradient; ctx.fillRect(0,0,4,128);
+      const texture=new T.CanvasTexture(canvas); texture.encoding=T.sRGBEncoding; return texture;
     }
     function prepareArenaTextures() {
-      for (let i = 0; i < ARENAS.length; i++) {
-        floorTextures[i] = new T.CanvasTexture(arenaCanvases[i]);
-        floorTextures[i].encoding = T.sRGBEncoding;
-        floorTextures[i].wrapS = T.RepeatWrapping; floorTextures[i].wrapT = T.RepeatWrapping;
-        floorTextures[i].repeat.set(3, 3);
-        skyTextures[i] = new T.CanvasTexture(arenaCanvases[i]);
-        skyTextures[i].encoding = T.sRGBEncoding;
-        arenaGroundMaterials[i] = new T.MeshStandardMaterial({ color: '#ffffff', map: floorTextures[i], roughness: .94 });
-        arenaSkyMaterials[i] = new T.MeshBasicMaterial({ map: skyTextures[i], side: T.BackSide, depthWrite: false });
+      for(let i=0;i<ARENAS.length;i++) {
+        floorTextures[i]=makeFloorTexture(ARENAS[i]); skyTextures[i]=makeSkyTexture(ARENAS[i]);
+        arenaGroundMaterials[i]=new T.MeshStandardMaterial({color:'#ffffff',map:floorTextures[i],roughness:.94});
+        arenaSkyMaterials[i]=new T.MeshBasicMaterial({map:skyTextures[i],side:T.BackSide,depthWrite:false});
       }
     }
 
     function initThree() {
-      prepareCharacterTextures();
       prepareArenaTextures();
       outlineMaterial = new T.MeshBasicMaterial({ color: '#182334', side: T.BackSide, depthWrite: true });
       world = new T.Scene();
@@ -925,7 +823,7 @@
       fightArenaEdge.rotation.x = Math.PI / 2; fightArenaEdge.position.y = -.035; fightArenaGroup.add(fightArenaEdge);
       for (let i = 0; i < 2; i++) {
         const rope = new T.Mesh(geometry('combat-rope-' + i, () => new T.TorusGeometry(3.16, .035, 4, 28)), material('#fff0d1', .4));
-        rope.rotation.x = Math.PI / 2; rope.position.y = .28 + i * .38; fightArenaGroup.add(rope);
+        rope.rotation.x = Math.PI / 2; rope.position.y = .28 + i * .38; fightArenaGroup.add(rope); fightArenaRopes.push(rope);
       }
       showcaseGroup = new T.Group(); world.add(showcaseGroup);
       detailGroup = new T.Group(); world.add(detailGroup); detailGroup.visible = false;
@@ -955,6 +853,7 @@
       createDamagePool();
       setArenaTheme(currentArena());
       createShowcase();
+      createPortraits();
       resizeThree();
       renderer.domElement.addEventListener('pointerdown', onCanvasPointerDown);
       renderer.domElement.addEventListener('pointermove', onCanvasPointerMove);
@@ -1003,6 +902,28 @@
         visual.position.set((i - 1) * 1.25, -.02, i === 1 ? -.25 : .4);
         visual.rotation.y = Math.PI;
         showcaseGroup.add(visual);
+      }
+    }
+
+    function createPortraits() {
+      const canvas=document.createElement('canvas'); canvas.width=112; canvas.height=112;
+      try {
+        portraitRenderer=new T.WebGLRenderer({canvas:canvas,alpha:true,antialias:true,powerPreference:'low-power',preserveDrawingBuffer:true});
+        portraitRenderer.setPixelRatio(1); portraitRenderer.setSize(112,112,false); portraitRenderer.setClearColor(0x17263b,0);
+        const portraitScene=new T.Scene();
+        portraitScene.add(new T.HemisphereLight(0xf3f7ff,0x47556b,1.5));
+        const portraitLight=new T.DirectionalLight(0xffebbf,2); portraitLight.position.set(-3,5,4); portraitScene.add(portraitLight);
+        const portraitCamera=new T.PerspectiveCamera(31,1,.1,20); portraitCamera.position.set(0,.93,4.2); portraitCamera.lookAt(0,.78,0);
+        for(let i=0;i<CHARACTERS.length;i++) {
+          const model=buildCharacter(i); model.position.set(0,0,0); portraitScene.add(model);
+          portraitRenderer.render(portraitScene,portraitCamera);
+          try { portraitImages[i]=portraitRenderer.domElement.toDataURL('image/png'); } catch (_) { portraitImages[i]=''; }
+          portraitScene.remove(model);
+        }
+        portraitRenderer.dispose(); portraitRenderer=null;
+      } catch (_) {
+        if(portraitRenderer) { try { portraitRenderer.dispose(); } catch (ignored) {} portraitRenderer=null; }
+        for(let i=0;i<CHARACTERS.length;i++) portraitImages[i]='';
       }
     }
 
@@ -1077,3 +998,133 @@
       document.documentElement.style.setProperty('--accent', arena.accent);
       sceneElement.style.background = 'linear-gradient(160deg, ' + arena.skyA + ', ' + arena.skyB + ' 67%, ' + arena.floor + ')';
       $('arenaNumber').textContent = 'ARENA ' + (currentArenaIndex + 1) + ' · ' + formatInteger(arena.minCups) + ' COPAS';
+      $('arenaName').textContent = arena.name;
+      $('arenaCaption').textContent = arena.caption;
+      const next = ARENAS[currentArenaIndex + 1];
+      const start = arena.minCups;
+      const end = next ? next.minCups : arena.minCups;
+      const progress = next ? clamp((state.cups - start) / (end - start), 0, 1) : 1;
+      $('progressFill').style.width = Math.round(progress * 100) + '%';
+      $('progressLabel').textContent = next ? formatInteger(state.cups - start) + ' / ' + formatInteger(end - start) + ' copas' : '¡Arena máxima!';
+      $('nextArenaText').textContent = next ? formatInteger(end) + ' 🏆' : 'MÁX.';
+      if (skyDome && arenaSkyMaterials[currentArenaIndex]) skyDome.material = arenaSkyMaterials[currentArenaIndex];
+      if (groundMesh && arenaGroundMaterials[currentArenaIndex]) groundMesh.material = arenaGroundMaterials[currentArenaIndex];
+      if (fillLight) fillLight.color.set(arena.skyA);
+      if (boardTiles.length) {
+        for (let i = 0; i < boardTiles.length; i++) {
+          const row = Math.floor(i / 5);
+          const color = row === 2 ? arena.dark : ((row + i % 5) % 2 ? arena.tileAlt : arena.tile);
+          boardTiles[i].material = material(color, .68, .04, color, row === 2 ? .025 : .08);
+        }
+      }
+      if (fightArenaFloor) fightArenaFloor.material = arenaGroundMaterials[currentArenaIndex];
+      if (fightArenaEdge) fightArenaEdge.material = material(arena.accent, .34, .12, arena.accent, .28);
+      for (let i = 0; i < fightArenaRopes.length; i++) fightArenaRopes[i].material = material(i ? arena.skyA : '#fff2d6', .4, .03);
+      if (decorGroup) buildArenaDecor(arena);
+      renderTop();
+      if (audioContext) {
+        musicStep = 0;
+        nextMusicTime = audioContext.currentTime + .05;
+      }
+    }
+
+    function renderTop() {
+      $('cupValue').textContent = formatInteger(state.cups);
+      $('coinValue').textContent = formatInteger(state.coins);
+      $('battleFooterNote').textContent=state.deck.length<TEAM_SIZE?'Consigue '+(TEAM_SIZE-state.deck.length)+' personajes más en Tienda o en cajas para completar tu mazo.':'Tu mazo está listo. ¡Elige posiciones y pelea!';
+      $('menuTip').textContent=state.deck.length<TEAM_SIZE?'Tienes '+state.deck.length+'/5 en el mazo. Completa el equipo desde Tienda o Personajes.':'Cinco brainrots listos para entrar en la arena.';
+    }
+    function renderRoster() {
+      rosterElement.textContent = '';
+      const used = new Set(playerLineup.map((unit) => unit.charId));
+      for (let i = 0; i < CHARACTERS.length; i++) {
+        const c = CHARACTERS[i];
+        const profile=state.collection[c.id], owned = profile.unlocked;
+        const inDeck = state.deck.includes(c.id);
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'hero-card' + (selectedCharacter === c.id ? ' selected' : '') + (used.has(c.id) ? ' deployed' : '');
+        card.style.setProperty('--hero-accent', rarityColor(c.rarity)); card.style.setProperty('--rarity-color',rarityColor(c.rarity));
+        card.innerHTML = '<img class="roster-portrait" src="' + (portraitImages[c.id] || '') + '" alt=""><span class="hero-name">' + c.name + '</span><span class="rarity-stars">'+rarityStars(c.rarity)+' · Nv.'+profile.level+'</span>' + (!owned ? '<span class="locked-mask">🔒</span>' : '');
+        card.setAttribute('aria-label', c.name + ', ' + c.role + '. ' + c.skill);
+        card.disabled = !owned || !inDeck;
+        if (!owned) card.title = 'Desbloquéala en Tienda o en una caja';
+        bindPointerButton(card, () => inDeck ? selectRosterCharacter(c.id) : showToast('Añade este personaje a tu mazo desde Personajes.'));
+        rosterElement.appendChild(card);
+      }
+      $('teamCount').textContent = playerLineup.length + '/5';
+      const ready = playerLineup.length === TEAM_SIZE;
+      $('readyButton').disabled = !ready || mode !== 'prep';
+      $('readyButton').textContent = ready ? '¡Listo!' : '¡Listo! · ' + playerLineup.length + '/5';
+      if (mode === 'prep') {
+        $('prepNote').textContent = selectedCharacter >= 0
+          ? 'Ahora toca una casilla de las dos filas inferiores.'
+          : 'Tu mazo está preparado: toca una unidad y luego una casilla para moverla.';
+      }
+    }
+    function rarityColor(rarity) { return ({ comun:'#b8d2e4', rara:'#58dca8', epica:'#bd82ff', legendaria:'#ffd25c' })[rarity] || '#dce8f3'; }
+    function rarityName(rarity) { return ({ comun:'COMÚN', rara:'RARA', epica:'ÉPICA', legendaria:'LEGENDARIA' })[rarity] || 'COMÚN'; }
+    function rarityStars(rarity) { return ({ comun:'★', rara:'★★', epica:'★★★', legendaria:'★★★★' })[rarity] || '★'; }
+    function currentDay() { return Math.floor(Date.now()/86400000); }
+    function dailyOfferCharacter() {
+      const day=currentDay();
+      if(state.dailyOfferDay!==day||!CHARACTERS[state.dailyOfferId]) {
+        const list=CHARACTERS.filter((c)=>c.id>=3&&c.arena<=currentArena());
+        if(!list.length) return null;
+        state.dailyOfferDay=day; state.dailyOfferId=list[day%list.length].id; saveState();
+      }
+      return CHARACTERS[state.dailyOfferId]||null;
+    }
+    function setTab(tab) {
+      if(!['battle','heroes','shop','chests'].includes(tab)||mode!=='menu') return;
+      selectedTab=tab; selectedDetail=-1; detailGroup.visible=false; $('detailCard').classList.remove('visible');
+      document.querySelectorAll('.nav-tab').forEach((button)=>button.classList.toggle('active',button.dataset.tab===tab));
+      renderManager(); setMode('menu'); playSound('tap');
+    }
+    function renderManager() {
+      const card=$('managerCard'), grid=$('managerGrid'), extra=$('managerExtra');
+      const visible=mode==='menu'&&selectedTab!=='battle'&&selectedDetail<0;
+      card.classList.toggle('visible',visible);
+      if(!visible) return;
+      grid.textContent=''; extra.textContent='';
+      if(selectedTab==='heroes') {
+        $('managerTitle').textContent='Mis personajes';
+        $('managerSubtitle').textContent='Elige cinco para tu mazo. Toca una tarjeta para ver detalles y mejorar.';
+        $('managerBadge').textContent=state.deck.length+'/5';
+        extra.innerHTML='<div class="deck-strip">'+Array.from({length:TEAM_SIZE},(_,i)=>'<div class="deck-slot">'+(state.deck[i]===undefined?'＋':'<img src="'+(portraitImages[state.deck[i]]||'')+'" alt="">')+'</div>').join('')+'</div>';
+        for(let i=0;i<CHARACTERS.length;i++) {
+          const c=CHARACTERS[i], profile=state.collection[c.id], unlocked=profile.unlocked, isDeck=state.deck.includes(c.id);
+          const button=document.createElement('button'); button.type='button'; button.className='unit-card'+(isDeck?' decked':''); button.style.setProperty('--rarity-color',rarityColor(c.rarity));
+          button.innerHTML='<img src="'+(portraitImages[c.id]||'')+'" alt=""><span class="unit-copy"><span class="unit-name">'+c.name+'</span><span class="rarity-stars">'+rarityStars(c.rarity)+' · Nv. '+profile.level+'</span><span class="unit-meta">'+(unlocked?profile.shards+' fragmentos':('Arena '+(c.arena+1)))+'</span></span>'+(unlocked?'':'<span class="locked-mask">🔒</span>');
+          bindPointerButton(button,()=>unlocked?openCharacterDetail(c.id):showToast('Disponible desde '+ARENAS[c.arena].name+'.'));
+          grid.appendChild(button);
+        }
+      } else if(selectedTab==='shop') {
+        $('managerTitle').textContent='Tienda'; $('managerSubtitle').textContent='Personajes de tu arena y cajas. Los precios se pagan con monedas.'; $('managerBadge').textContent='🪙 '+formatInteger(state.coins);
+        const offer=dailyOfferCharacter(), offerReady=state.dailyBuyDay!==currentDay();
+        const offerOwned=offer&&state.collection[offer.id].unlocked;
+        const offerName=offer?offer.name:'Caja rara'; const offerPrice=offer?(offerOwned?Math.max(60,Math.floor(offer.price*.3)):Math.max(80,Math.floor(offer.price*.75))):165;
+        extra.innerHTML='<div class="offer-card"><div><strong>⭐ Oferta diaria</strong><small>'+(offer?(offerOwned?'6 fragmentos de '+offer.name:'−25% · '+offer.name):'recompensa especial')+' · cambia en 24 h</small></div><button class="mini-action" id="dailyBuyButton" type="button">'+(offerReady?'🪙 '+offerPrice:'Comprada')+'</button></div><div class="shop-boxes"><div class="shop-box-card"><div><strong>🎁 Caja común</strong><small>1–2 recompensas · 100 monedas</small></div><button class="mini-action" data-box="comun" type="button">Comprar</button></div><div class="shop-box-card"><div><strong>💎 Caja rara</strong><small>Mejores probabilidades · 220 monedas</small></div><button class="mini-action" data-box="rara" type="button">Comprar</button></div><div class="shop-box-card"><div><strong>👑 Caja épica</strong><small>Recompensas épicas · 380 monedas</small></div><button class="mini-action" data-box="epica" type="button">Comprar</button></div></div>';
+        const dailyButton=$('dailyBuyButton'); bindPointerButton(dailyButton,()=>buyDailyOffer());
+        extra.querySelectorAll('[data-box]').forEach((button)=>bindPointerButton(button,()=>purchaseChest(button.dataset.box)));
+        for(let i=0;i<CHARACTERS.length;i++) {
+          const c=CHARACTERS[i], profile=state.collection[c.id], gated=c.arena>currentArena();
+          if(gated||profile.unlocked) continue;
+          const button=document.createElement('button'); button.type='button'; button.className='unit-card'; button.style.setProperty('--rarity-color',rarityColor(c.rarity));
+          button.innerHTML='<img src="'+(portraitImages[c.id]||'')+'" alt=""><span class="unit-copy"><span class="unit-name">'+c.name+'</span><span class="rarity-stars">'+rarityStars(c.rarity)+' · '+rarityName(c.rarity)+'</span><span class="unit-meta">🪙 '+c.price+'</span></span>';
+          bindPointerButton(button,()=>purchaseCharacter(c.id)); grid.appendChild(button);
+        }
+        if(!grid.children.length) grid.innerHTML='<div class="manager-subtitle">Ya tienes todos los personajes de esta arena. ¡Abre cajas o gana copas para avanzar!</div>';
+      } else {
+        $('managerTitle').textContent='Cajas'; $('managerSubtitle').textContent='Abre recompensas para conseguir personajes, fragmentos y monedas.'; $('managerBadge').textContent=state.chests.length+' disponibles';
+        extra.innerHTML='<div class="offer-card"><div><strong>🎁 Tus recompensas</strong><small>Gana cajas al vencer o consíguelas en Tienda.</small></div><button class="mini-action" id="goShopButton" type="button">Tienda</button></div>';
+        bindPointerButton($('goShopButton'),()=>setTab('shop'));
+        if(!state.chests.length) grid.innerHTML='<div class="manager-subtitle">Todavía no tienes cajas. ¡Gana tu próxima batalla!</div>';
+        const visibleChests=state.chests.slice(-10);
+        for(let i=0;i<visibleChests.length;i++) {
+          const chest=visibleChests[i], button=document.createElement('button'); button.type='button'; button.className='chest-card';
+          button.innerHTML='<span style="font-size:30px">'+(chest.rarity==='epica'?'👑':chest.rarity==='rara'?'💎':'🎁')+'</span><span><strong>Caja '+rarityName(chest.rarity).toLowerCase()+'</strong><small>Toca para abrir tu recompensa</small></span><span>›</span>';
+          bindPointerButton(button,()=>openChest(chest.id,false)); grid.appendChild(button);
+        }
+      }
+    }
