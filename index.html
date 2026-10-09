@@ -1,0 +1,1079 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#25334d">
+  <meta name="description" content="Brainrot Clash: elige tu equipo brainrot y lucha en arenas 3D.">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Brainrot Clash">
+  <link rel="manifest" href="data:application/manifest+json,%7B%22name%22%3A%22Brainrot%20Clash%22%2C%22short_name%22%3A%22Brainrot%20Clash%22%2C%22display%22%3A%22standalone%22%2C%22orientation%22%3A%22portrait%22%2C%22background_color%22%3A%22%2325334d%22%2C%22theme_color%22%3A%22%2325334d%22%7D">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <title>Brainrot Clash</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --ink: #fffdf8;
+      --muted: #dbe6f2;
+      --gold: #ffe36a;
+      --accent: #ffc94d;
+      --sky-a: #88d8ff;
+      --sky-b: #ffcb84;
+      --panel: rgba(18, 31, 55, .82);
+      --stroke: rgba(255,255,255,.26);
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; }
+    html, body {
+      width: 100%; height: 100%; height: 100dvh; margin: 0; overflow: hidden;
+      overscroll-behavior: none; touch-action: none; background: #25334d;
+    }
+    body {
+      color: var(--ink); background: linear-gradient(155deg, var(--sky-a), var(--sky-b) 68%, #273652);
+      background-size: 180% 180%; animation: skyFlow 18s ease-in-out infinite;
+      -webkit-touch-callout: none;
+    }
+    button { color: inherit; font: inherit; cursor: pointer; touch-action: none; }
+    .app {
+      width: 100%; height: 100dvh; min-height: 0; display: grid;
+      grid-template-rows: auto minmax(0,1fr) auto; gap: clamp(6px, .9vh, 10px);
+      overflow: hidden; position: relative;
+      padding: max(1vh, env(safe-area-inset-top)) max(3vw, env(safe-area-inset-right)) max(.8vh, env(safe-area-inset-bottom)) max(3vw, env(safe-area-inset-left));
+    }
+    .topbar { display: flex; align-items: center; justify-content: space-between; min-height: clamp(52px, 7vh, 64px); gap: 2vw; }
+    .brand { display: flex; align-items: center; gap: 2vw; min-width: 0; }
+    .brand-mark {
+      display: grid; place-items: center; flex: 0 0 auto; width: clamp(38px, 10vw, 46px); aspect-ratio: 1;
+      border: .35vw solid rgba(255,255,255,.5); border-radius: 30%;
+      background: linear-gradient(145deg, #fff36c, #ff8a46 55%, #fa4b87);
+      box-shadow: 0 .4em 1em rgba(174,56,50,.24), inset 0 .15em .3em rgba(255,255,255,.5);
+      transform: rotate(-7deg); font-size: clamp(22px, 6vw, 29px);
+    }
+    .brand-title { font-size: clamp(17px, 5vw, 23px); font-weight: 1000; letter-spacing: .045em; line-height: 1; text-shadow: 0 .13em .2em rgba(16,30,54,.28); white-space: nowrap; }
+    .top-right { display: flex; align-items: center; gap: 2vw; }
+    .cup-pill {
+      min-height: 48px; display: flex; align-items: center; gap: 1vw; padding: 0 3vw;
+      border: .3vw solid rgba(255,255,255,.42); border-radius: 999px;
+      background: linear-gradient(145deg, rgba(22,34,59,.86), rgba(49,60,86,.8));
+      box-shadow: 0 .35em .75em rgba(16,29,52,.2), inset 0 1px rgba(255,255,255,.16);
+      color: var(--gold); font-size: clamp(15px, 4.5vw, 20px); font-weight: 1000; white-space: nowrap;
+    }
+    .resource-pills { display: flex; align-items: center; gap: 1.2vw; }
+    .coin-pill { color: #fff2a8; }
+    .sound-btn {
+      min-width: 56px; min-height: 56px; width: clamp(56px, 14vw, 62px);
+      border: .3vw solid rgba(255,255,255,.42); border-radius: 1.1em;
+      background: rgba(28,42,66,.67); box-shadow: 0 .35em .8em rgba(16,29,52,.2), inset 0 1px rgba(255,255,255,.2);
+      font-size: clamp(21px, 6vw, 27px); transition: transform .1s ease, filter .1s ease;
+    }
+    .scene {
+      min-height: 0; position: relative; overflow: hidden; isolation: isolate;
+      border: .35vw solid rgba(255,255,255,.34); border-radius: clamp(24px, 6vw, 34px);
+      background: linear-gradient(160deg, var(--sky-a), var(--sky-b) 67%, #506b73);
+      box-shadow: 0 .8em 2em rgba(24,38,57,.26), inset 0 1px rgba(255,255,255,.4);
+    }
+    #threeStage { position: absolute; inset: 0; z-index: 0; overflow: hidden; touch-action: none; }
+    #threeStage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+    .screen-layer { position: absolute; z-index: 2; inset: 0; pointer-events: none; }
+    .menu-card {
+      position: absolute; top: clamp(13px, 3vh, 25px); left: 6%; right: 6%; padding: clamp(14px, 3vh, 22px) 4vw;
+      border: .35vw solid rgba(255,255,255,.48); border-radius: clamp(20px, 5.5vw, 30px);
+      background: linear-gradient(145deg, rgba(18,34,56,.79), rgba(31,48,70,.68));
+      box-shadow: 0 .7em 1.5em rgba(20,37,57,.22), inset 0 1px rgba(255,255,255,.25);
+      text-align: center; backdrop-filter: blur(7px);
+    }
+    .eyebrow { color: #f8e7a3; font-size: clamp(10px, 2.8vw, 12px); font-weight: 1000; letter-spacing: .18em; text-transform: uppercase; }
+    .arena-name { margin: .18em 0 .16em; font-size: clamp(23px, 7vw, 34px); line-height: 1.05; font-weight: 1000; text-shadow: 0 .12em .2em rgba(11,27,43,.28); }
+    .arena-caption { color: #eef7ff; font-size: clamp(11px, 3.1vw, 14px); font-weight: 750; }
+    .progress-wrap { margin: clamp(10px, 2vh, 16px) 1vw 0; }
+    .progress-head { display: flex; justify-content: space-between; gap: 2vw; color: #fff8da; font-size: clamp(10px, 2.8vw, 12px); font-weight: 950; letter-spacing: .035em; }
+    .progress-track { height: clamp(11px, 2.2vh, 15px); margin-top: .42em; overflow: hidden; border: .2vw solid rgba(255,255,255,.46); border-radius: 999px; background: rgba(12,26,47,.56); box-shadow: inset 0 .12em .3em rgba(0,0,0,.3); }
+    .progress-fill { height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, #fff16a, #ff9f39 58%, #ff5a77); box-shadow: 0 0 .8em rgba(255,227,106,.7); transition: width .35s ease; }
+    .menu-tip { position: absolute; left: 5%; right: 5%; bottom: 4%; color: #fff; text-align: center; font-size: clamp(11px, 3vw, 13px); font-weight: 900; letter-spacing: .04em; text-shadow: 0 .15em .35em rgba(12,27,45,.55); }
+    .prep-head {
+      position: absolute; top: clamp(10px, 2vh, 18px); left: 4%; right: 4%; display: flex; justify-content: space-between; align-items: center; gap: 2vw;
+    }
+    .prep-pill, .timer-pill, .battle-pill {
+      display: inline-flex; align-items: center; justify-content: center; gap: 1.5vw;
+      min-height: clamp(37px, 5.5vh, 46px); padding: .45em 1em; border: .3vw solid rgba(255,255,255,.42);
+      border-radius: 999px; background: rgba(18,32,52,.78); box-shadow: 0 .35em .8em rgba(15,30,50,.23), inset 0 1px rgba(255,255,255,.16);
+      color: #fff; font-size: clamp(11px, 3.2vw, 14px); font-weight: 1000; letter-spacing: .04em; white-space: nowrap;
+    }
+    .timer-pill { color: #fff16b; font-size: clamp(16px, 4.8vw, 21px); min-width: 66px; }
+    .battle-hud { position: absolute; inset: 0; }
+    .battle-pill { position: absolute; top: clamp(10px, 2vh, 18px); left: 50%; transform: translateX(-50%); }
+    .team-count { position: absolute; top: clamp(57px, 8.5vh, 74px); left: 50%; transform: translateX(-50%); padding: .42em .9em; border-radius: 999px; background: rgba(15,28,49,.7); color: #f7f4e8; font-size: clamp(10px, 2.8vw, 12px); font-weight: 900; white-space: nowrap; }
+    .result-card {
+      display: none; position: absolute; top: 50%; left: 6%; right: 6%; transform: translateY(-50%);
+      padding: clamp(18px, 4vh, 30px) 5vw; border: .4vw solid rgba(255,255,255,.46); border-radius: clamp(24px, 6vw, 34px);
+      background: linear-gradient(145deg, rgba(22,38,60,.96), rgba(35,49,73,.94));
+      box-shadow: 0 1em 2.5em rgba(10,24,42,.42), inset 0 1px rgba(255,255,255,.26);
+      text-align: center; pointer-events: none; backdrop-filter: blur(8px);
+    }
+    .result-card.visible { display: block; animation: resultPop .4s cubic-bezier(.16,1.1,.38,1) both; }
+    .result-icon { font-size: clamp(43px, 14vw, 65px); line-height: 1; filter: drop-shadow(0 .16em .22em rgba(255,220,95,.42)); }
+    .result-title { margin: .22em 0 .16em; color: #ffec74; font-size: clamp(26px, 8vw, 39px); line-height: 1; font-weight: 1000; text-shadow: 0 .13em .28em rgba(255,129,51,.38); }
+    .result-card.loss .result-title { color: #ffb5bb; }
+    .result-copy { color: #edf4ff; font-size: clamp(13px, 3.8vw, 17px); font-weight: 800; }
+    .trophy-change { margin-top: .45em; color: var(--gold); font-size: clamp(22px, 6vw, 29px); font-weight: 1000; }
+    .toast {
+      position: absolute; z-index: 8; left: 50%; bottom: 2%; transform: translate(-50%, 150%);
+      max-width: 92%; padding: .72em 1.1em; border: .25vw solid rgba(255,255,255,.35); border-radius: 999px;
+      background: rgba(15,27,47,.93); box-shadow: 0 .5em 1em rgba(10,24,42,.3);
+      color: white; font-size: clamp(11px, 3.1vw, 14px); font-weight: 900; white-space: nowrap; transition: transform .24s ease;
+    }
+    .toast.visible { transform: translate(-50%, 0); }
+    .damage-layer { position: absolute; inset: 0; z-index: 4; overflow: hidden; pointer-events: none; }
+    .damage-label { position: absolute; left: 0; top: 0; transform: translate(-50%,-50%); color: #fff; font-size: clamp(20px, 7vw, 34px); font-weight: 1000; white-space: nowrap; text-shadow: 0 .12em .2em #1c2a40, 0 0 .35em rgba(255,255,255,.7); opacity: 0; }
+    .damage-label.critical { color: #fff05e; font-size: clamp(24px, 8vw, 40px); }
+    .damage-label.skill { color: #8efaff; font-size: clamp(21px, 7vw, 35px); }
+    .announce { position: absolute; top: 48%; left: 50%; transform: translate(-50%,-50%) scale(.7); opacity: 0; z-index: 5; color: #fff06b; font-size: clamp(25px, 9vw, 45px); font-weight: 1000; white-space: nowrap; text-shadow: 0 .12em .22em #a34227, 0 0 .45em #fff17a; }
+    .announce.show { animation: announce .75s ease-out both; }
+    .footer { min-width: 0; display: flex; flex-direction: column; gap: clamp(5px, .8vh, 8px); }
+    .footer-screen { display: flex; flex-direction: column; gap: clamp(5px, .8vh, 8px); }
+    .footer-note { min-height: 1.25em; color: #fff; text-align: center; font-size: clamp(10px, 2.8vw, 12px); font-weight: 850; text-shadow: 0 .1em .25em rgba(14,28,45,.38); }
+    .action-row { display: grid; grid-template-columns: 1fr 1fr; gap: 3vw; }
+    .action-btn {
+      min-height: 56px; height: clamp(56px, 7.7vh, 72px); padding: 0 3vw; border: .35vw solid rgba(255,255,255,.5);
+      border-radius: clamp(18px, 5vw, 25px); font-size: clamp(15px, 4.4vw, 19px); font-weight: 1000; letter-spacing: .025em;
+      box-shadow: 0 .55em 1em rgba(21,36,55,.24), inset 0 .18em .33em rgba(255,255,255,.48), inset 0 -.2em .35em rgba(30,42,60,.15);
+      text-shadow: 0 .1em .2em rgba(0,0,0,.14); transition: transform .1s ease, filter .1s ease, opacity .1s ease;
+    }
+    .action-btn:disabled { opacity: .42; filter: saturate(.6); }
+    .action-btn.pressed, .hero-card.pressed, .sound-btn.pressed { transform: translateY(.08em) scale(.95); filter: brightness(1.12); }
+    .battle-btn { grid-column: 1 / -1; color: #3f3211; background: linear-gradient(145deg, #fff884, #ffbd3f 56%, #ff8148); font-size: clamp(21px, 6vw, 27px); }
+    .ready-btn { grid-column: 1 / -1; color: #173c35; background: linear-gradient(145deg, #9affd6, #42e9b6 55%, #58c9ff); }
+    .speed-btn { grid-column: 1 / -1; color: #153f5d; background: linear-gradient(145deg, #a8f3ff, #64cfff 60%, #8e9aff); }
+    .menu-btn { color: #243250; background: linear-gradient(145deg, #f9fdff, #bceaff); }
+    .rematch-btn { color: #442c16; background: linear-gradient(145deg, #fff283, #ffc04b 60%, #ff9347); }
+    .hero-roster { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: clamp(4px, 1.25vw, 7px); }
+    .hero-card {
+      min-width: 0; min-height: clamp(56px, 8vh, 68px); padding: .22em .1em; border: .3vw solid var(--rarity-color,rgba(255,255,255,.32));
+      border-radius: clamp(11px, 3.2vw, 15px); color: #fff; background: linear-gradient(145deg, rgba(22,38,60,.8), rgba(39,54,77,.78));
+      box-shadow: 0 .28em .6em rgba(14,29,47,.2), inset 0 1px rgba(255,255,255,.14);
+      display: flex; flex-direction: column; justify-content: center; align-items: center; gap: .08em;
+      line-height: 1.05; transition: transform .1s ease, filter .1s ease, opacity .1s ease, border-color .1s ease;
+    }
+    .hero-card { position: relative; gap: .08em; padding: .18em .06em; }
+    .roster-portrait { width: clamp(25px,7vw,31px); height: clamp(25px,7vw,31px); object-fit: cover; border-radius: 8px; background: rgba(255,255,255,.1); }
+    .hero-card .hero-name { font-size: clamp(7px,1.9vw,9px); }
+    .hero-card .rarity-stars { font-size: clamp(6px,1.6vw,8px); line-height: 1; }
+    .hero-card .locked-mask { border-radius: inherit; font-size: 9px; }
+    .hero-card.selected { border-color: #fff166; box-shadow: 0 0 .8em rgba(255,231,94,.66), inset 0 1px rgba(255,255,255,.25); }
+    .hero-card.deployed { border-color: rgba(114,255,196,.76); background: linear-gradient(145deg, rgba(21,94,78,.88), rgba(27,69,76,.82)); }
+    .hero-card:disabled { opacity: .63; }
+    .hero-number { display: grid; place-items: center; width: 1.6em; aspect-ratio: 1; border-radius: 50%; background: var(--hero-accent, #ffe36a); color: #25334d; font-size: clamp(10px, 2.8vw, 12px); font-weight: 1000; }
+    .hero-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: clamp(8px, 2.2vw, 10px); font-weight: 950; }
+    .fallback {
+      position: absolute; z-index: 20; inset: 6%; display: grid; place-items: center; padding: 8vw;
+      border: .4vw solid rgba(255,255,255,.4); border-radius: 8vw; background: rgba(19,32,52,.97);
+      text-align: center; font-size: clamp(17px, 5vw, 22px); font-weight: 900; line-height: 1.4;
+    }
+    .loading-screen { position: fixed; z-index: 40; inset: 0; display: grid; place-items: center; padding: max(6vw,env(safe-area-inset-top)) max(6vw,env(safe-area-inset-right)) max(6vw,env(safe-area-inset-bottom)) max(6vw,env(safe-area-inset-left)); background: linear-gradient(155deg,#74caff,#ffcb84 68%,#273652); }
+    .loading-card { width: min(100%,420px); padding: clamp(22px,7vw,34px); border: 2px solid rgba(255,255,255,.55); border-radius: 28px; text-align: center; background: rgba(18,31,55,.88); box-shadow: 0 1em 2em rgba(15,31,51,.3),inset 0 1px rgba(255,255,255,.2); }
+    .loading-title { margin: 0 0 .3em; font-size: clamp(24px,8vw,38px); font-weight: 1000; }
+    .loading-copy { margin: 0 0 1em; color: #e2edf9; font-size: clamp(12px,3.5vw,15px); font-weight: 800; }
+    .loading-track { height: 16px; overflow: hidden; border: 2px solid rgba(255,255,255,.45); border-radius: 99px; background: rgba(0,0,0,.25); }
+    .loading-fill { width: 0; height: 100%; border-radius: inherit; background: linear-gradient(90deg,#fff16a,#ff9e45,#fb5680); box-shadow: 0 0 14px rgba(255,227,106,.7); transition: width .16s ease; }
+    .loading-percent { display: block; margin-top: .6em; color: #ffeb88; font-size: 16px; font-weight: 1000; }
+    .manager-card {
+      display: none; position: absolute; z-index: 3; inset: 5% 4%; padding: clamp(12px, 2.3vh, 18px) 3vw;
+      border: .35vw solid rgba(255,255,255,.5); border-radius: clamp(20px, 5vw, 28px);
+      background: linear-gradient(145deg, rgba(18,31,52,.91), rgba(35,48,69,.91));
+      box-shadow: 0 .8em 2em rgba(13,27,45,.34), inset 0 1px rgba(255,255,255,.24);
+      backdrop-filter: blur(8px); pointer-events: auto; overflow: hidden;
+    }
+    .manager-card.visible { display: flex; flex-direction: column; gap: clamp(7px, 1.1vh, 10px); }
+    .manager-title { margin: 0; display: flex; align-items: center; justify-content: space-between; gap: 2vw; font-size: clamp(19px, 5vw, 25px); font-weight: 1000; }
+    .manager-subtitle { margin: 0; color: #dce8f5; font-size: clamp(10px, 2.8vw, 12px); font-weight: 800; }
+    .deck-strip { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 1vw; }
+    .deck-slot { min-width: 0; height: clamp(43px, 6.5vh, 54px); display: grid; place-items: center; border: .25vw dashed rgba(255,255,255,.28); border-radius: 12px; background: rgba(255,255,255,.07); overflow: hidden; }
+    .deck-slot img { width: 100%; height: 100%; object-fit: cover; }
+    .manager-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); grid-auto-rows: minmax(56px,1fr); gap: clamp(5px, 1vh, 8px); flex: 1; min-height: 0; }
+    .unit-card { min-width: 0; min-height: 56px; position: relative; display: flex; align-items: center; gap: 2vw; padding: .38em 2vw; border: .35vw solid var(--rarity-color,#bdc7d2); border-radius: 14px; color: white; text-align: left; background: linear-gradient(145deg,rgba(51,67,88,.95),rgba(24,37,57,.95)); box-shadow: inset 0 1px rgba(255,255,255,.16),0 .25em .55em rgba(0,0,0,.18); overflow: hidden; }
+    .unit-card:disabled { opacity: .6; }
+    .unit-card.decked { box-shadow: 0 0 .75em rgba(118,255,193,.55), inset 0 1px rgba(255,255,255,.2); }
+    .unit-card img { flex: 0 0 auto; width: clamp(34px, 10vw, 46px); aspect-ratio: 1; border-radius: 10px; object-fit: cover; background: #26364d; }
+    .unit-copy { min-width: 0; display: flex; flex-direction: column; gap: .14em; }
+    .unit-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: clamp(9px, 2.7vw, 12px); font-weight: 1000; }
+    .unit-meta { color: #fceca1; font-size: clamp(8px, 2.2vw, 10px); font-weight: 900; }
+    .rarity-stars { color: var(--rarity-color,#ddd); letter-spacing: -.08em; font-size: clamp(8px, 2.1vw, 10px); }
+    .locked-mask { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-size: clamp(10px, 2.8vw, 12px); font-weight: 1000; background: rgba(18,24,36,.67); }
+    .offer-row,.chest-list { display: flex; flex-direction: column; gap: clamp(6px, 1vh, 9px); }
+    .shop-boxes { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 1vw; }
+    .offer-card,.shop-box-card,.chest-card { min-height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 2vw; padding: .45em 2.3vw; border: .3vw solid rgba(255,255,255,.24); border-radius: 15px; background: rgba(255,255,255,.09); }
+    .offer-thumb { flex: 0 0 auto; width: clamp(38px,11vw,48px); aspect-ratio: 1; border-radius: 10px; object-fit: cover; background: rgba(255,255,255,.1); }
+    .shop-box-card { min-width: 0; flex-direction: column; justify-content: center; gap: .25em; padding: .3em .7vw; text-align: center; }
+    .shop-box-card small { display: none; }
+    .shop-box-card .mini-action { min-width: 0; width: 100%; padding: .2em .5vw; }
+    .offer-card strong,.shop-box-card strong,.chest-card strong { display: block; font-size: clamp(11px,3vw,14px); font-weight: 1000; }
+    .offer-card small,.shop-box-card small,.chest-card small { color: #dce8f5; font-size: clamp(9px,2.5vw,11px); font-weight: 800; }
+    .mini-action { flex: 0 0 auto; min-width: 70px; min-height: 56px; padding: .25em 2vw; border: 0; border-radius: 12px; color: #392d13; background: linear-gradient(145deg,#fff17a,#ffa93f); font-weight: 1000; font-size: clamp(9px,2.4vw,11px); }
+    .manager-scroll { flex: 1; min-height: 0; overflow: hidden; overscroll-behavior: none; touch-action: none; }
+    .manager-scroll::-webkit-scrollbar { display: none; }
+    .nav-bar { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 1.5vw; }
+    .nav-tab { min-width: 0; min-height: 56px; padding: .2em 1vw; border: .3vw solid rgba(255,255,255,.32); border-radius: 15px; color: #e8f3ff; background: linear-gradient(145deg,rgba(24,39,61,.9),rgba(43,57,80,.9)); font-size: clamp(8px,2.5vw,11px); font-weight: 1000; box-shadow: inset 0 1px rgba(255,255,255,.15); }
+    .nav-tab span { display: block; font-size: clamp(18px,5vw,23px); line-height: 1.05; }
+    .nav-tab.active { color: #342911; border-color: rgba(255,255,255,.7); background: linear-gradient(145deg,#fff37b,#ffae3c); }
+    .detail-card,.opening-card { display: none; position: absolute; z-index: 7; left: 5%; right: 5%; bottom: 4%; padding: clamp(12px,2vh,18px) 4vw; border: .35vw solid rgba(255,255,255,.5); border-radius: 22px; background: rgba(20,32,52,.95); box-shadow: 0 .8em 2em rgba(0,0,0,.4); pointer-events: auto; }
+    .detail-card.visible,.opening-card.visible { display: block; animation: resultPop .28s ease-out both; }
+    .detail-head { display: flex; align-items: center; gap: 3vw; }
+    .detail-head img { width: clamp(68px,19vw,94px); aspect-ratio: 1; border-radius: 16px; border: .4vw solid var(--rarity-color,#fff); object-fit: cover; }
+    .detail-head h2 { margin: 0 0 .2em; font-size: clamp(18px,5vw,25px); line-height: 1.05; }
+    .detail-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 1vw; margin-top: 1vh; color: #e7f2fc; text-align: center; font-size: clamp(9px,2.6vw,12px); font-weight: 900; }
+    .detail-stats b { display: block; color: #ffe779; font-size: clamp(12px,3.4vw,16px); }
+    .detail-copy { margin: .65em 0; color: #e4eef9; font-size: clamp(10px,2.8vw,13px); font-weight: 800; }
+    .detail-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 2vw; }
+    .opening-card { top: 50%; bottom: auto; transform: translateY(-50%); text-align: center; }
+    .box-visual { font-size: clamp(65px,22vw,100px); filter: drop-shadow(0 .2em .3em rgba(255,204,61,.5)); }
+    .box-visual.shaking { animation: boxShake .16s ease-in-out infinite alternate; }
+    .reward-line { min-height: 2.5em; color: #fff1a1; font-size: clamp(14px,4vw,18px); font-weight: 1000; }
+    .reward-portraits { display: flex; justify-content: center; gap: 2vw; margin: .25em 0 .4em; }
+    .reward-portrait { display: flex; min-width: 0; flex-direction: column; align-items: center; gap: .2em; color: #fff; font-size: clamp(9px,2.5vw,11px); }
+    .reward-portrait img { width: clamp(54px,16vw,72px); aspect-ratio: 1; object-fit: cover; border-radius: 14px; border: 2px solid rgba(255,255,255,.6); background: rgba(255,255,255,.1); }
+    .reward-coins { display: block; color: #fff1a1; }
+    @keyframes boxShake { from { transform: rotate(-7deg) scale(.96); } to { transform: rotate(7deg) scale(1.05); } }
+    .hidden { display: none !important; }
+    @keyframes skyFlow { 0%,100% { background-position: 0% 30%; } 50% { background-position: 100% 70%; } }
+    @keyframes resultPop { from { opacity: 0; transform: translateY(-46%) scale(.77); } to { opacity: 1; transform: translateY(-50%) scale(1); } }
+    @keyframes announce { 0% { opacity: 0; transform: translate(-50%,-50%) scale(.6); } 18% { opacity: 1; transform: translate(-50%,-50%) scale(1.1); } 75% { opacity: 1; transform: translate(-50%,-60%) scale(1); } 100% { opacity: 0; transform: translate(-50%,-72%) scale(.95); } }
+    @media (max-height: 710px) {
+      .app { gap: 5px; }
+      .topbar { min-height: 52px; }
+      .hero-card { min-height: 56px; }
+      .action-btn { height: 56px; }
+      .footer { gap: 4px; }
+      .menu-card { padding-top: 12px; padding-bottom: 12px; }
+      .manager-card { inset: 2.5% 3%; padding: 8px 2.5vw; gap: 5px; }
+      .manager-grid { grid-auto-rows: minmax(56px,1fr); gap: 4px; }
+      .unit-card { padding: .18em 1.2vw; gap: 1vw; }
+      .unit-card img { width: 34px; }
+      .deck-slot { height: 42px; }
+      .offer-card { min-height: 48px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app" id="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">⚔️</span>
+        <span class="brand-title">BRAINROT<br>CLASH</span>
+      </div>
+      <div class="top-right">
+        <div class="resource-pills">
+          <div class="cup-pill coin-pill" aria-label="Monedas"><span>🪙</span><span id="coinValue">300</span></div>
+          <div class="cup-pill" aria-label="Copas"><span>🏆</span><span id="cupValue">0</span></div>
+        </div>
+        <button class="sound-btn" id="soundBtn" type="button" aria-label="Silenciar sonido">🔊</button>
+      </div>
+    </header>
+
+    <section class="scene" id="scene" aria-label="Arena tridimensional">
+      <div id="threeStage"></div>
+      <div class="screen-layer">
+        <section class="menu-card" id="menuCard">
+          <div class="eyebrow" id="arenaNumber">ARENA 1 · 0 COPAS</div>
+          <h1 class="arena-name" id="arenaName">Granja Brainrot</h1>
+          <div class="arena-caption" id="arenaCaption">¡Donde comienza el caos!</div>
+          <div class="progress-wrap">
+            <div class="progress-head"><span id="progressLabel">Progreso</span><span id="nextArenaText">200 🏆</span></div>
+            <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+          </div>
+        </section>
+        <div class="menu-tip" id="menuTip">Elige cinco brainrots y lánzalos al combate</div>
+
+        <div class="prep-head hidden" id="prepHead">
+          <div class="prep-pill">EQUIPO <span id="teamCount">0/5</span></div>
+          <div class="timer-pill" id="prepTimer">20</div>
+        </div>
+
+        <div class="battle-hud hidden" id="battleHud">
+          <div class="battle-pill" id="battleTimer">00:00</div>
+          <div class="team-count" id="battleCount">5 VS 5</div>
+        </div>
+
+        <div class="damage-layer" id="damageLayer" aria-hidden="true"></div>
+        <div class="announce" id="announce"></div>
+
+        <section class="manager-card" id="managerCard">
+          <h2 class="manager-title"><span id="managerTitle">Mis personajes</span><span id="managerBadge"></span></h2>
+          <p class="manager-subtitle" id="managerSubtitle"></p>
+          <div id="managerExtra"></div>
+          <div class="manager-scroll"><div class="manager-grid" id="managerGrid"></div></div>
+        </section>
+
+        <section class="detail-card" id="detailCard">
+          <div class="detail-head"><img id="detailPortrait" alt=""><div><h2 id="detailName"></h2><div id="detailRarity"></div></div></div>
+          <div class="detail-stats" id="detailStats"></div>
+          <p class="detail-copy" id="detailCopy"></p>
+          <div class="detail-actions" id="detailActions"></div>
+        </section>
+
+        <section class="opening-card" id="openingCard">
+          <div class="box-visual" id="boxVisual">🎁</div>
+          <div class="eyebrow" id="openingLabel">RECOMPENSA</div>
+          <div class="reward-line" id="rewardLine">¡Una caja te espera!</div>
+        <div class="manager-subtitle">Toca el botón inferior para revelar el contenido.</div>
+        </section>
+
+        <section class="result-card" id="resultCard" aria-live="polite">
+          <div class="result-icon" id="resultIcon">🏆</div>
+          <div class="result-title" id="resultTitle">¡VICTORIA!</div>
+          <div class="result-copy" id="resultCopy">Tu equipo domina la arena.</div>
+          <div class="trophy-change" id="trophyChange">+25 🏆</div>
+        </section>
+        <div class="fallback hidden" id="fallback">Three.js no se pudo cargar o WebGL no está disponible. Comprueba tu conexión y vuelve a abrir Brainrot Clash.</div>
+        <div class="toast" id="toast" role="status"></div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <section class="footer-screen" id="menuControls">
+        <button class="action-btn battle-btn" id="battleButton" type="button">¡BATALLA!</button>
+        <div class="footer-note" id="battleFooterNote">Consigue dos personajes más en Tienda para completar tu mazo.</div>
+      </section>
+      <section class="footer-screen hidden" id="prepControls">
+        <div class="footer-note" id="prepNote">Toca un personaje y luego una casilla de abajo para colocarlo.</div>
+        <div class="hero-roster" id="heroRoster" aria-label="Personajes disponibles"></div>
+        <button class="action-btn ready-btn" id="readyButton" type="button" disabled>¡Listo! · 0/5</button>
+      </section>
+      <section class="footer-screen hidden" id="battleControls">
+        <button class="action-btn speed-btn" id="speedButton" type="button">Acelerar x2</button>
+        <div class="footer-note">Tu equipo pelea automáticamente. ¡Activa sus habilidades!</div>
+      </section>
+      <section class="footer-screen hidden" id="resultControls">
+        <div class="action-row">
+          <button class="action-btn menu-btn" id="menuButton" type="button">Menú</button>
+          <button class="action-btn rematch-btn" id="rematchButton" type="button">Revancha</button>
+        </div>
+        <button class="action-btn rematch-btn hidden" id="resultBoxButton" type="button">🎁 Abrir caja</button>
+      </section>
+      <section class="footer-screen hidden" id="openingControls">
+        <button class="action-btn ready-btn" id="openingContinueButton" type="button">Continuar</button>
+      </section>
+      <nav class="nav-bar" id="mainNav" aria-label="Navegación principal">
+        <button class="nav-tab active" data-tab="battle" type="button"><span>⚔️</span>Batalla</button>
+        <button class="nav-tab" data-tab="heroes" type="button"><span>🧑‍🤝‍🧑</span>Personajes</button>
+        <button class="nav-tab" data-tab="shop" type="button"><span>🛒</span>Tienda</button>
+        <button class="nav-tab" data-tab="chests" type="button"><span>🎁</span>Cajas</button>
+      </nav>
+    </footer>
+  </main>
+
+  <section class="loading-screen" id="loadingScreen" aria-live="polite">
+    <div class="loading-card">
+      <h1 class="loading-title">BRAINROT CLASH</h1>
+      <p class="loading-copy" id="loadingCopy">Preparando personajes y arenas…</p>
+      <div class="loading-track"><div class="loading-fill" id="loadingFill"></div></div>
+      <span class="loading-percent" id="loadingPercent">0%</span>
+    </div>
+  </section>
+
+  <script>
+  (() => {
+    'use strict';
+
+    // Fichas fáciles de ampliar: estadísticas y kit de cada brainrot.
+    const CHARACTERS = [
+      { id: 0, name: 'Pollito Pum', role: 'Velocidad', hp: 76, damage: 9, attackSpeed: .46, range: .82, speed: 1.75, skill: 'Picotazos x3', description: 'Tres picotazos rápidos que castigan a un rival cercano.', kind: 'triple', color: '#ffd43b', suit: '#ffba32', accent: '#f36b32', skin: '#ffe7a0', rarity: 'comun', price: 0, arena: 0 },
+      { id: 1, name: 'Boxeador Banana', role: 'Combo', hp: 122, damage: 17, attackSpeed: .78, range: .9, speed: 1.12, skill: 'Combo aturdidor', description: 'Encadena dos puñetazos; el segundo deja al rival aturdido.', kind: 'stunCombo', color: '#ffe15a', suit: '#f5bb2d', accent: '#e6475d', skin: '#ffdf66', rarity: 'comun', price: 0, arena: 0 },
+      { id: 2, name: 'Gato Sumo', role: 'Tanque', hp: 235, damage: 23, attackSpeed: 1.42, range: 1.08, speed: .67, skill: 'Onda de choque', description: 'Aplasta el suelo y empuja a todos los enemigos cercanos.', kind: 'shockwave', color: '#f4cba9', suit: '#5a5b69', accent: '#ffd44c', skin: '#f3c7a5', rarity: 'comun', price: 0, arena: 0 },
+      { id: 3, name: 'Abuela Ninja', role: 'Asesina', hp: 94, damage: 13, attackSpeed: .56, range: .9, speed: 1.72, skill: 'Golpe por la espalda', description: 'Esquiva el primer golpe que recibe y aparece detrás del objetivo.', kind: 'backstab', color: '#efd0ad', suit: '#563a8d', accent: '#ee6aa8', skin: '#f1d4b5', rarity: 'rara', price: 140, arena: 0 },
+      { id: 4, name: 'Tung Tung Tung Sahur', role: 'Bate', hp: 112, damage: 25, attackSpeed: 1.08, range: 3.25, speed: .9, skill: 'Bate a la fila', description: 'Lanza el bate contra toda una fila de rivales.', kind: 'batRow', color: '#bc8055', suit: '#76462e', accent: '#e8b65a', skin: '#c88b61', rarity: 'rara', price: 150, arena: 0 },
+      { id: 5, name: 'Bombardiro Crocodilo', role: 'Bombas', hp: 132, damage: 16, attackSpeed: .94, range: 2.9, speed: .91, skill: 'Bomba de área', description: 'Bombardea al enemigo y a quienes estén a su lado.', kind: 'bomb', color: '#66bd72', suit: '#388755', accent: '#e0ac4c', skin: '#74c47c', rarity: 'rara', price: 220, arena: 1 },
+      { id: 6, name: 'Tralalero Tralala', role: 'Embiste', hp: 145, damage: 22, attackSpeed: .88, range: .98, speed: 1.38, skill: 'Embestida', description: 'Se lanza como un tiburón y golpea con gran fuerza.', kind: 'charge', color: '#6bd3ec', suit: '#287fc0', accent: '#f2eddb', skin: '#72d9ec', rarity: 'epica', price: 290, arena: 1 },
+      { id: 7, name: 'Cappuccino Asesino', role: 'Sangrado', hp: 102, damage: 14, attackSpeed: .61, range: 1.02, speed: 1.31, skill: 'Corte sangrante', description: 'Corta al objetivo y le causa daño durante tres segundos.', kind: 'bleed', color: '#f3d7af', suit: '#76503d', accent: '#7ee3d0', skin: '#f0d2aa', rarity: 'epica', price: 360, arena: 2 },
+      { id: 8, name: 'Dragón Brainrot', role: 'Fuego', hp: 158, damage: 21, attackSpeed: 1.02, range: 2.35, speed: .86, skill: 'Cono de fuego', description: 'Respira fuego en un cono y quema a varios rivales.', kind: 'fireCone', color: '#e95043', suit: '#c83735', accent: '#ff9a43', skin: '#f06855', rarity: 'legendaria', price: 480, arena: 4 },
+      { id: 9, name: 'Dios del Trueno Sahur', role: 'Rayo', hp: 145, damage: 19, attackSpeed: .9, range: 2.65, speed: .98, skill: 'Rayo en cadena', description: 'Invoca un rayo que salta entre tres enemigos.', kind: 'chain', color: '#f3dc74', suit: '#405dab', accent: '#9cf4ff', skin: '#f6e19a', rarity: 'legendaria', price: 650, arena: 5 }
+    ];
+
+    const ARENAS = [
+      { name: 'Granja Brainrot', minCups: 0, caption: '¡Donde comienza el caos!', skyA: '#a6e8ff', skyB: '#ffe29a', floor: '#a5cf74', tile: '#8eb85d', tileAlt: '#9fc96d', accent: '#ffe15c', dark: '#508454', music: [73.42, 98, 110, 82.41], melody: [392, 440, 523.25, 440, 349.23, 392, 493.88, 392], scene: 'farm' },
+      { name: 'Playa Tralalero', minCups: 200, caption: '¡Las olas traen rivales!', skyA: '#73dcff', skyB: '#fff2a4', floor: '#e6c778', tile: '#48b9d4', tileAlt: '#64cce0', accent: '#ff8f69', dark: '#3286a3', music: [65.41, 98, 130.81, 98], melody: [523.25, 587.33, 659.25, 587.33, 440, 523.25, 587.33, 523.25], scene: 'beach' },
+      { name: 'Desierto Sahur', minCups: 500, caption: '¡El calor sube la tensión!', skyA: '#ffbd73', skyB: '#ffe7a5', floor: '#d99a58', tile: '#dfad5c', tileAlt: '#edbe6e', accent: '#fb664c', dark: '#a8573d', music: [55, 82.41, 110, 73.42], melody: [293.66, 349.23, 392, 440, 392, 349.23, 329.63, 293.66], scene: 'desert' },
+      { name: 'Ciudad Cappuccino', minCups: 900, caption: '¡Luces, caos y cafeína!', skyA: '#a98cff', skyB: '#f78fc0', floor: '#6d609c', tile: '#8574d2', tileAlt: '#a08ce9', accent: '#f5a7d1', dark: '#473d78', music: [73.42, 110, 146.83, 110], melody: [349.23, 440, 523.25, 587.33, 523.25, 440, 392, 349.23], scene: 'city' },
+      { name: 'Volcán Dragón', minCups: 1400, caption: '¡El suelo tiembla bajo tus pies!', skyA: '#6b426c', skyB: '#ec654f', floor: '#5d3946', tile: '#98534d', tileAlt: '#b76651', accent: '#ffbf45', dark: '#382b42', music: [55, 73.42, 82.41, 65.41], melody: [261.63, 329.63, 392, 349.23, 293.66, 349.23, 392, 261.63], scene: 'volcano' },
+      { name: 'Estadio del Trueno', minCups: 2000, caption: '¡La leyenda se decide aquí!', skyA: '#344c86', skyB: '#8e8bea', floor: '#4d6493', tile: '#6281bf', tileAlt: '#7d9be0', accent: '#fff36b', dark: '#2f416e', music: [65.41, 98, 123.47, 82.41], melody: [440, 523.25, 659.25, 587.33, 493.88, 587.33, 659.25, 523.25], scene: 'stadium' }
+    ];
+
+    const STORAGE_KEY = 'brainrot-clash-save-v1';
+    const TEAM_SIZE = 5;
+    const PREP_SECONDS = 20;
+    const MATCH_LIMIT = 40;
+    const CELL_SPACING = 1.12;
+    const $ = (id) => document.getElementById(id);
+    const stage = $('threeStage');
+    const sceneElement = $('scene');
+    const rosterElement = $('heroRoster');
+
+    const freshCollection = () => CHARACTERS.map((character) => ({ unlocked: character.id < 3, level: 1, shards: 0 }));
+    const state = { cups: 0, bestCups: 0, battles: 0, wins: 0, muted: false, coins: 300, collection: freshCollection(), deck: [0, 1, 2], chests: [], dailyBuyDay: -1, dailyOfferDay: -1, dailyOfferId: -1 };
+    function loadState() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+        if (!saved || typeof saved !== 'object') return;
+        state.cups = Math.max(0, Math.floor(Number(saved.cups) || 0));
+        state.bestCups = Math.max(state.cups, Math.floor(Number(saved.bestCups) || 0));
+        state.battles = Math.max(0, Math.floor(Number(saved.battles) || 0));
+        state.wins = Math.max(0, Math.floor(Number(saved.wins) || 0));
+        state.muted = Boolean(saved.muted);
+        state.coins = Math.max(0, Math.floor(Number(saved.coins === undefined ? 300 : saved.coins) || 0));
+        const storedCollection = Array.isArray(saved.collection) ? saved.collection : [];
+        state.collection = CHARACTERS.map((character, index) => {
+          const stored = storedCollection[index];
+          return stored && typeof stored === 'object'
+            ? { unlocked: Boolean(stored.unlocked), level: clamp(Math.floor(Number(stored.level) || 1), 1, 10), shards: Math.max(0, Math.floor(Number(stored.shards) || 0)) }
+            : { unlocked: character.id < 3, level: 1, shards: 0 };
+        });
+        const hasDeck=Array.isArray(saved.deck);
+        const deck = hasDeck ? saved.deck.filter((id, index, list) => Number.isInteger(id) && id >= 0 && id < CHARACTERS.length && state.collection[id].unlocked && list.indexOf(id) === index).slice(0, TEAM_SIZE) : [0,1,2];
+        state.deck = deck;
+        state.chests = Array.isArray(saved.chests) ? saved.chests.filter((chest) => chest && typeof chest === 'object' && ['comun', 'rara', 'epica'].includes(chest.rarity)).slice(0, 30) : [];
+        state.dailyBuyDay = Number.isFinite(Number(saved.dailyBuyDay)) ? Number(saved.dailyBuyDay) : -1;
+        state.dailyOfferDay = Number.isFinite(Number(saved.dailyOfferDay)) ? Number(saved.dailyOfferDay) : -1;
+        state.dailyOfferId = Number.isInteger(saved.dailyOfferId) ? saved.dailyOfferId : -1;
+      } catch (_) { /* Se inicia una partida limpia si el almacenamiento está bloqueado. */ }
+    }
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+          cups: state.cups, bestCups: state.bestCups, battles: state.battles, wins: state.wins, muted: state.muted,
+          coins: state.coins, collection: state.collection, deck: state.deck, chests: state.chests,
+          dailyBuyDay: state.dailyBuyDay, dailyOfferDay: state.dailyOfferDay, dailyOfferId: state.dailyOfferId
+        }));
+      } catch (_) { /* El juego sigue funcionando aunque localStorage no esté disponible. */ }
+    }
+
+    const T = window.THREE;
+    if (!T) {
+      $('loadingScreen').classList.add('hidden');
+      $('fallback').classList.remove('hidden');
+      $('menuControls').classList.add('hidden');
+      return;
+    }
+
+    const geometryCache = Object.create(null);
+    const materialCache = Object.create(null);
+    const characterTemplates = [];
+    const portraitImages = [];
+    const characterCanvases = [];
+    const characterWhiteCanvases = [];
+    const characterTextures = [];
+    const characterWhiteTextures = [];
+    const characterAspects = [];
+    const arenaCanvases = [];
+    const floorTextures = [];
+    const skyTextures = [];
+    const arenaGroundMaterials = [];
+    const arenaSkyMaterials = [];
+    const boardTiles = [];
+    const particlePool = [];
+    const damagePool = [];
+    const pointer = new T.Vector2();
+    const raycaster = new T.Raycaster();
+    const rayIntersections = [];
+    const worldPosition = new T.Vector3();
+
+    let renderer = null;
+    let world = null;
+    let camera = null;
+    let environmentGroup = null;
+    let decorGroup = null;
+    let skyDome = null;
+    let groundMesh = null;
+    let keyLight = null;
+    let fillLight = null;
+    let outlineMaterial = null;
+    let boardGroup = null;
+    let playerPreviewGroup = null;
+    let enemyPreviewGroup = null;
+    let fighterGroup = null;
+    let fightArenaGroup = null;
+    let fightArenaFloor = null;
+    let fightArenaEdge = null;
+    let fightArenaRopes = [];
+    let showcaseGroup = null;
+    let detailGroup = null;
+    let detailVisual = null;
+    let selectRing = null;
+    let particleIndex = 16;
+    let glowIndex = 0;
+    let damageIndex = 0;
+    let sceneWidth = 1;
+    let sceneHeight = 1;
+    let pixelRatio = 1;
+    let lowFpsTime = 0;
+    let fpsWindow = 0;
+    let fpsFrames = 0;
+    let reducedQuality = false;
+    let shadowCheckTimer = 0;
+
+    let mode = 'menu';
+    let prepSeconds = PREP_SECONDS;
+    let fightSeconds = 0;
+    let speedMultiplier = 1;
+    let phase = 'idle';
+    let resultWon = false;
+    let finishDelay = 0;
+    let slowZoom = 0;
+    let screenShake = 0;
+    let lastTime = 0;
+    let saveTimer = 0;
+    let musicTimer = 0;
+    let musicStep = 0;
+    let nextMusicTime = 0;
+    let audioContext = null;
+    let masterGain = null;
+    let musicGain = null;
+    let mergeSelection = -1;
+    let selectedCharacter = -1;
+    let selectedCell = -1;
+    let selectedDetail = -1;
+    let selectedTab = 'battle';
+    let openingChestId = null;
+    let openingFromResult = false;
+    let openingBusy = false;
+    let openingRevealed = false;
+    let pointerCell = -1;
+    let pointerSource = -1;
+    let pointerStartX = 0;
+    let pointerStartY = 0;
+    let pointerMoved = false;
+    let playerLineup = [];
+    let enemyLineup = [];
+    let playerUnits = [];
+    let enemyUnits = [];
+    let currentArenaIndex = 0;
+    let announceTime = 0;
+    let toastTimer = 0;
+    let ambientTime = 0;
+    let shownFightSecond = -1;
+    let shownAliveCount = '';
+
+    function clamp(value, low, high) { return Math.max(low, Math.min(high, value)); }
+    function randomFrom(list) { return list[Math.floor(Math.random() * list.length)]; }
+    function formatInteger(value) { return new Intl.NumberFormat('es-ES', { maximumFractionDigits: 0 }).format(Math.max(0, Math.floor(value))); }
+    function cellCoords(index) { return { row: Math.floor(index / 5), col: index % 5 }; }
+    function cellIndex(row, col) { return row * 5 + col; }
+    function cellPosition(index) {
+      const cell = cellCoords(index);
+      return { x: (cell.col - 2) * CELL_SPACING, z: (cell.row - 2) * CELL_SPACING };
+    }
+    function currentArena() {
+      let index = 0;
+      for (let i = 0; i < ARENAS.length; i++) if (state.cups >= ARENAS[i].minCups) index = i;
+      return index;
+    }
+
+    function geometry(key, build) {
+      if (!geometryCache[key]) geometryCache[key] = build();
+      return geometryCache[key];
+    }
+    function material(color, roughness, metalness, emissive, glow) {
+      const rough = roughness === undefined ? .72 : roughness;
+      const metal = metalness || 0;
+      const emit = emissive || '#000000';
+      const intensity = glow || 0;
+      const key = [color, rough, metal, emit, intensity].join(':');
+      if (!materialCache[key]) materialCache[key] = new T.MeshStandardMaterial({
+        color: color, roughness: rough, metalness: metal, emissive: emit, emissiveIntensity: intensity
+      });
+      return materialCache[key];
+    }
+    function boxGeo() { return geometry('box', () => new T.BoxGeometry(1, 1, 1)); }
+    function sphereGeo() { return geometry('sphere', () => new T.SphereGeometry(1, 8, 6)); }
+    function coneGeo() { return geometry('cone', () => new T.ConeGeometry(.5, 1, 5, 1)); }
+    function cylinderGeo() { return geometry('cylinder', () => new T.CylinderGeometry(.5, .5, 1, 7, 1)); }
+    function torusGeo() { return geometry('torus', () => new T.TorusGeometry(.5, .055, 5, 18)); }
+    function roundedTileGeo() {
+      return geometry('rounded-tile', () => {
+        const shape = new T.Shape();
+        const half = .5, radius = .12;
+        shape.moveTo(-half + radius, -half);
+        shape.lineTo(half - radius, -half); shape.quadraticCurveTo(half, -half, half, -half + radius);
+        shape.lineTo(half, half - radius); shape.quadraticCurveTo(half, half, half - radius, half);
+        shape.lineTo(-half + radius, half); shape.quadraticCurveTo(-half, half, -half, half - radius);
+        shape.lineTo(-half, -half + radius); shape.quadraticCurveTo(-half, -half, -half + radius, -half);
+        const result = new T.ExtrudeGeometry(shape, { depth: .12, bevelEnabled: true, bevelSegments: 2, bevelSize: .025, bevelThickness: .018, curveSegments: 3 });
+        result.computeVertexNormals();
+        return result;
+      });
+    }
+    function addMesh(parent, geo, mat, position, scale, rotation) {
+      const mesh = new T.Mesh(geo, mat);
+      mesh.position.set(position[0], position[1], position[2]);
+      mesh.scale.set(scale[0], scale[1], scale[2]);
+      if (rotation) mesh.rotation.set(rotation[0], rotation[1], rotation[2]);
+      mesh.castShadow = true; mesh.receiveShadow = true; parent.add(mesh);
+      return mesh;
+    }
+    function addBox(parent, color, position, scale, rotation, roughness, metalness) {
+      return addMesh(parent, boxGeo(), material(color, roughness, metalness), position, scale, rotation);
+    }
+    function addSphere(parent, color, position, scale, roughness, metalness) {
+      return addMesh(parent, sphereGeo(), material(color, roughness, metalness), position, scale);
+    }
+    function addCone(parent, color, position, scale, rotation, roughness, metalness) {
+      return addMesh(parent, coneGeo(), material(color, roughness, metalness), position, scale, rotation);
+    }
+    function addCylinder(parent, color, position, scale, rotation, roughness, metalness) {
+      return addMesh(parent, cylinderGeo(), material(color, roughness, metalness), position, scale, rotation);
+    }
+    function outlinedSphere(parent, color, position, scale) {
+      const mesh = addSphere(parent, color, position, scale, .68);
+      const outline = new T.Mesh(mesh.geometry, outlineMaterial);
+      outline.position.copy(mesh.position); outline.scale.copy(mesh.scale).multiplyScalar(1.035); outline.renderOrder = 1;
+      parent.add(outline);
+      return mesh;
+    }
+    function outlinedBox(parent, color, position, scale) {
+      const mesh = addBox(parent, color, position, scale, null, .7);
+      const outline = new T.Mesh(mesh.geometry, outlineMaterial);
+      outline.position.copy(mesh.position); outline.scale.copy(mesh.scale).multiplyScalar(1.035); outline.renderOrder = 1;
+      parent.add(outline);
+      return mesh;
+    }
+    function createCharacterTemplate(id) {
+      const root = new T.Group();
+      root.name = 'character-' + id;
+      root.scale.setScalar(.48);
+
+      const shadow = new T.Mesh(geometry('unit-shadow', () => new T.CircleGeometry(.9, 14)), new T.MeshBasicMaterial({
+        color: '#142337', map: glowTexture, transparent: true, opacity: .5, depthWrite: false
+      }));
+      shadow.name = 'groundShadow';
+      shadow.rotation.x = -Math.PI / 2;
+      shadow.position.y = .025;
+      shadow.scale.set(1.1, .72, 1);
+      root.add(shadow);
+
+      const height = 2.12 + id * .055;
+      const width = height * (characterAspects[id] || .82);
+      const sprite = new T.Sprite(new T.SpriteMaterial({
+        map: characterTextures[id], transparent: true, alphaTest: .012, depthWrite: false
+      }));
+      sprite.name = 'characterSprite';
+      sprite.center.set(.5, .025);
+      sprite.position.y = .05;
+      sprite.scale.set(width, height, 1);
+      sprite.renderOrder = 2;
+      root.add(sprite);
+
+      const flash = new T.Sprite(new T.SpriteMaterial({
+        map: characterWhiteTextures[id], transparent: true, alphaTest: .012, opacity: 0,
+        depthWrite: false, depthTest: false
+      }));
+      flash.name = 'hitGlow';
+      flash.center.copy(sprite.center);
+      flash.position.set(0, .052, .01);
+      flash.scale.set(width, height, 1);
+      flash.renderOrder = 4;
+      flash.visible = false;
+      root.add(flash);
+
+      if (id >= 6) {
+        const aura = new T.Mesh(torusGeo(), new T.MeshBasicMaterial({
+          color: CHARACTERS[id].accent, transparent: true, opacity: .42,
+          blending: T.AdditiveBlending, depthWrite: false
+        }));
+        aura.name = 'auraRing';
+        aura.rotation.x = Math.PI / 2;
+        aura.position.y = .075;
+        aura.scale.set(1.32, 1.32, 1.32);
+        root.add(aura);
+      }
+
+      const trail = new T.Mesh(geometry('charge-trail', () => new T.TorusGeometry(.5, .08, 4, 12)), new T.MeshBasicMaterial({
+        color: '#a7f4ff', transparent: true, opacity: .68, blending: T.AdditiveBlending, depthWrite: false
+      }));
+      trail.name = 'chargeTrail';
+      trail.rotation.x = Math.PI / 2;
+      trail.position.y = .16;
+      trail.visible = false;
+      root.add(trail);
+      return root;
+    }
+
+    // Se conserva una plantilla por personaje; cada unidad clona sus sprites y efectos.
+    function buildCharacter(id) {
+      if (!characterTemplates[id]) characterTemplates[id] = createCharacterTemplate(id);
+      const clone = characterTemplates[id].clone(true);
+      const sprite = clone.getObjectByName('characterSprite');
+      const flash = clone.getObjectByName('hitGlow');
+      const aura = clone.getObjectByName('auraRing');
+      const trail = clone.getObjectByName('chargeTrail');
+      if (sprite) sprite.material = sprite.material.clone();
+      if (flash) flash.material = flash.material.clone();
+      if (aura) aura.material = aura.material.clone();
+      if (trail) trail.material = trail.material.clone();
+      return clone;
+    }
+
+    function fitCanvas(image) {
+      const sourceWidth = image.naturalWidth || image.width;
+      const sourceHeight = image.naturalHeight || image.height;
+      const ratio = Math.min(1, 512 / Math.max(sourceWidth, sourceHeight));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(sourceWidth * ratio));
+      canvas.height = Math.max(1, Math.round(sourceHeight * ratio));
+      canvas.getContext('2d', { willReadFrequently: true }).drawImage(image, 0, 0, canvas.width, canvas.height);
+      return canvas;
+    }
+    function characterFallbackCanvas(character) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 256; canvas.height = 256;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, 256, 256);
+      ctx.fillStyle = character.color;
+      ctx.beginPath(); ctx.arc(128, 124, 108, 0, Math.PI * 2); ctx.fill();
+      ctx.lineWidth = 9; ctx.strokeStyle = 'rgba(24,35,52,.8)'; ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = '900 27px system-ui, sans-serif';
+      const words = character.name.split(' ');
+      const lines = [];
+      let line = '';
+      for (let i = 0; i < words.length; i++) {
+        const candidate = line ? line + ' ' + words[i] : words[i];
+        if (candidate.length > 13 && line) { lines.push(line); line = words[i]; }
+        else line = candidate;
+      }
+      if (line) lines.push(line);
+      const startY = 124 - (lines.length - 1) * 17;
+      for (let i = 0; i < lines.length; i++) ctx.fillText(lines[i], 128, startY + i * 34, 206);
+      return canvas;
+    }
+    function arenaFallbackCanvas(arena) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 512; canvas.height = 512;
+      const ctx = canvas.getContext('2d');
+      const gradient = ctx.createLinearGradient(0, 0, 0, 512);
+      gradient.addColorStop(0, arena.skyA); gradient.addColorStop(.6, arena.skyB); gradient.addColorStop(1, arena.floor);
+      ctx.fillStyle = gradient; ctx.fillRect(0, 0, 512, 512);
+      ctx.fillStyle = arena.dark; ctx.beginPath(); ctx.moveTo(0, 330); ctx.lineTo(135, 235); ctx.lineTo(240, 330); ctx.lineTo(380, 220); ctx.lineTo(512, 325); ctx.lineTo(512, 512); ctx.lineTo(0, 512); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.78)'; ctx.textAlign = 'center'; ctx.font = '900 32px system-ui, sans-serif';
+      ctx.fillText(arena.name, 256, 82, 460);
+      return canvas;
+    }
+    function chromaKeyCharacter(canvas) {
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const pixels = image.data;
+      for (let i = 0; i < pixels.length; i += 4) {
+        const r = pixels[i], g = pixels[i + 1], b = pixels[i + 2];
+        const greenDominance = g - Math.max(r, b);
+        if (g > 72 && greenDominance > 24) {
+          const distance = Math.sqrt(r * r + (255 - g) * (255 - g) + b * b);
+          const edge = clamp((distance - 18) / 62, 0, 1);
+          const smooth = edge * edge * (3 - 2 * edge);
+          pixels[i + 3] = Math.round(pixels[i + 3] * smooth);
+          const spill = Math.max(0, Math.min(g - r, g - b));
+          pixels[i + 1] = Math.max(0, Math.round(g - spill * (1 - smooth) * .72));
+        }
+      }
+      ctx.putImageData(image, 0, 0);
+      return canvas;
+    }
+    function makeWhiteAlphaCanvas(canvas) {
+      const white = document.createElement('canvas');
+      white.width = canvas.width; white.height = canvas.height;
+      const ctx = white.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(canvas, 0, 0);
+      const image = ctx.getImageData(0, 0, white.width, white.height);
+      const pixels = image.data;
+      for (let i = 0; i < pixels.length; i += 4) { pixels[i] = 255; pixels[i + 1] = 255; pixels[i + 2] = 255; }
+      ctx.putImageData(image, 0, 0);
+      return white;
+    }
+    function loadImage(path) {
+      return new Promise((resolve) => {
+        const image = new Image();
+        let finished = false;
+        const done = (value) => { if (finished) return; finished = true; clearTimeout(timeout); resolve(value); };
+        const timeout = setTimeout(() => done(null), 10000);
+        image.onload = () => done(image);
+        image.onerror = () => done(null);
+        image.src = path;
+      });
+    }
+    function updateLoading(done, total, label) {
+      const percent = Math.round(done / total * 100);
+      $('loadingFill').style.width = percent + '%';
+      $('loadingPercent').textContent = percent + '%';
+      $('loadingCopy').textContent = label || 'Preparando personajes y arenas…';
+    }
+    async function preloadAssets() {
+      const total = CHARACTERS.length + ARENAS.length;
+      let done = 0;
+      updateLoading(0, total, 'Cargando imágenes…');
+      const tasks = [];
+      for (let i = 0; i < CHARACTERS.length; i++) {
+        tasks.push((async (index) => {
+          let canvas = null;
+          const image = await loadImage('assets/personaje' + (index + 1) + '.png');
+          if (image) {
+            try { canvas = chromaKeyCharacter(fitCanvas(image)); } catch (_) { canvas = null; }
+          }
+          if (!canvas) canvas = characterFallbackCanvas(CHARACTERS[index]);
+          characterCanvases[index] = canvas;
+          characterWhiteCanvases[index] = makeWhiteAlphaCanvas(canvas);
+          characterAspects[index] = canvas.width / canvas.height;
+          try { portraitImages[index] = canvas.toDataURL('image/png'); } catch (_) { portraitImages[index] = ''; }
+          done++;
+          updateLoading(done, total, 'Personajes ' + Math.min(index + 1, CHARACTERS.length) + ' de ' + CHARACTERS.length);
+        })(i));
+      }
+      for (let i = 0; i < ARENAS.length; i++) {
+        tasks.push((async (index) => {
+          let canvas = null;
+          const image = await loadImage('assets/arena' + (index + 1) + '.png');
+          if (image) { try { canvas = fitCanvas(image); } catch (_) { canvas = null; } }
+          arenaCanvases[index] = canvas || arenaFallbackCanvas(ARENAS[index]);
+          done++;
+          updateLoading(done, total, 'Arenas ' + Math.min(index + 1, ARENAS.length) + ' de ' + ARENAS.length);
+        })(i));
+      }
+      await Promise.all(tasks);
+      updateLoading(total, total, '¡Todo listo!');
+      await new Promise((resolve) => setTimeout(resolve, 220));
+      $('loadingScreen').classList.add('hidden');
+    }
+    function prepareCharacterTextures() {
+      for (let i = 0; i < CHARACTERS.length; i++) {
+        characterTextures[i] = new T.CanvasTexture(characterCanvases[i]);
+        characterTextures[i].encoding = T.sRGBEncoding;
+        characterTextures[i].minFilter = T.LinearMipmapLinearFilter;
+        characterWhiteTextures[i] = new T.CanvasTexture(characterWhiteCanvases[i]);
+        characterWhiteTextures[i].encoding = T.sRGBEncoding;
+        characterWhiteTextures[i].minFilter = T.LinearMipmapLinearFilter;
+      }
+    }
+    function prepareArenaTextures() {
+      for (let i = 0; i < ARENAS.length; i++) {
+        floorTextures[i] = new T.CanvasTexture(arenaCanvases[i]);
+        floorTextures[i].encoding = T.sRGBEncoding;
+        floorTextures[i].wrapS = T.RepeatWrapping; floorTextures[i].wrapT = T.RepeatWrapping;
+        floorTextures[i].repeat.set(3, 3);
+        skyTextures[i] = new T.CanvasTexture(arenaCanvases[i]);
+        skyTextures[i].encoding = T.sRGBEncoding;
+        arenaGroundMaterials[i] = new T.MeshStandardMaterial({ color: '#ffffff', map: floorTextures[i], roughness: .94 });
+        arenaSkyMaterials[i] = new T.MeshBasicMaterial({ map: skyTextures[i], side: T.BackSide, depthWrite: false });
+      }
+    }
+
+    function initThree() {
+      prepareCharacterTextures();
+      prepareArenaTextures();
+      outlineMaterial = new T.MeshBasicMaterial({ color: '#182334', side: T.BackSide, depthWrite: true });
+      world = new T.Scene();
+      world.background = null;
+      const rect = stage.getBoundingClientRect();
+      sceneWidth = Math.max(1, rect.width); sceneHeight = Math.max(1, rect.height);
+      renderer = new T.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'high-performance' });
+      pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
+      renderer.setPixelRatio(pixelRatio);
+      renderer.setSize(sceneWidth, sceneHeight, false);
+      renderer.setClearColor(0x000000, 0);
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = T.PCFSoftShadowMap;
+      renderer.shadowMap.autoUpdate = true;
+      renderer.outputEncoding = T.sRGBEncoding;
+      renderer.toneMapping = T.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.05;
+      renderer.domElement.setAttribute('aria-label', 'Tablero 3D de Brainrot Clash');
+      stage.appendChild(renderer.domElement);
+
+      camera = new T.PerspectiveCamera(48, sceneWidth / sceneHeight, .1, 80);
+      camera.position.set(0, 7.2, 4.15);
+      camera.lookAt(0, 0, 0);
+
+      const hemisphere = new T.HemisphereLight(0xe6f3ff, 0x50403f, 1.3);
+      world.add(hemisphere);
+      keyLight = new T.DirectionalLight(0xfff1cf, 2.25);
+      keyLight.position.set(-5.5, 10, 7);
+      keyLight.castShadow = true;
+      keyLight.shadow.mapSize.set(1024, 1024);
+      keyLight.shadow.camera.left = -8; keyLight.shadow.camera.right = 8;
+      keyLight.shadow.camera.top = 9; keyLight.shadow.camera.bottom = -8;
+      keyLight.shadow.camera.near = .5; keyLight.shadow.camera.far = 28;
+      keyLight.shadow.bias = -.00055;
+      keyLight.shadow.radius = 4;
+      world.add(keyLight);
+      fillLight = new T.DirectionalLight(0xa5c8ff, .72);
+      fillLight.position.set(5, 6, -4);
+      world.add(fillLight);
+
+      skyDome = new T.Mesh(geometry('sky-dome', () => new T.SphereGeometry(18, 18, 12)), arenaSkyMaterials[currentArena()]);
+      skyDome.renderOrder = -5; world.add(skyDome);
+
+      environmentGroup = new T.Group(); world.add(environmentGroup);
+      decorGroup = new T.Group(); environmentGroup.add(decorGroup);
+      groundMesh = new T.Mesh(new T.PlaneGeometry(18, 18), arenaGroundMaterials[currentArena()]);
+      groundMesh.rotation.x = -Math.PI / 2; groundMesh.position.y = -.47;
+      groundMesh.receiveShadow = true; environmentGroup.add(groundMesh);
+
+      boardGroup = new T.Group(); world.add(boardGroup);
+      playerPreviewGroup = new T.Group(); boardGroup.add(playerPreviewGroup);
+      enemyPreviewGroup = new T.Group(); boardGroup.add(enemyPreviewGroup);
+      fighterGroup = new T.Group(); world.add(fighterGroup);
+      fightArenaGroup = new T.Group(); world.add(fightArenaGroup);
+      fightArenaFloor = new T.Mesh(geometry('combat-floor', () => new T.CylinderGeometry(3.25, 3.48, .25, 24)), material('#6e644b', .72));
+      fightArenaFloor.position.y = -.19; fightArenaFloor.receiveShadow = true; fightArenaFloor.castShadow = true; fightArenaGroup.add(fightArenaFloor);
+      fightArenaEdge = new T.Mesh(geometry('combat-edge', () => new T.TorusGeometry(3.05, .07, 5, 28)), material('#ffe36a', .38, .12, '#ffe36a', .24));
+      fightArenaEdge.rotation.x = Math.PI / 2; fightArenaEdge.position.y = -.035; fightArenaGroup.add(fightArenaEdge);
+      for (let i = 0; i < 2; i++) {
+        const rope = new T.Mesh(geometry('combat-rope-' + i, () => new T.TorusGeometry(3.16, .035, 4, 28)), material('#fff0d1', .4));
+        rope.rotation.x = Math.PI / 2; rope.position.y = .28 + i * .38; fightArenaGroup.add(rope);
+      }
+      showcaseGroup = new T.Group(); world.add(showcaseGroup);
+      detailGroup = new T.Group(); world.add(detailGroup); detailGroup.visible = false;
+      fightArenaGroup.visible = false;
+
+      const base = new T.Mesh(new T.BoxGeometry(5.98, .28, 5.98), material('#324653', .65, .06));
+      base.position.set(0, -.18, 0); base.receiveShadow = true; base.castShadow = true; boardGroup.add(base);
+      for (let row = 0; row < 5; row++) {
+        for (let col = 0; col < 5; col++) {
+          const index = cellIndex(row, col);
+          const tile = new T.Mesh(roundedTileGeo(), material('#738b69', .72));
+          const pos = cellPosition(index);
+          tile.position.set(pos.x, -.005, pos.z);
+          tile.rotation.x = -Math.PI / 2;
+          tile.userData.cellIndex = index;
+          tile.receiveShadow = true; tile.castShadow = true;
+          boardGroup.add(tile); boardTiles.push(tile);
+        }
+      }
+      selectRing = new T.Mesh(geometry('select-ring', () => new T.TorusGeometry(.43, .045, 5, 20)), new T.MeshStandardMaterial({
+        color: '#fff06a', emissive: '#ffe85a', emissiveIntensity: 1, metalness: .08, roughness: .32
+      }));
+      selectRing.rotation.x = -Math.PI / 2; selectRing.position.y = .145; selectRing.visible = false; boardGroup.add(selectRing);
+
+      createGlowTexture();
+      createParticles();
+      createDamagePool();
+      setArenaTheme(currentArena());
+      createShowcase();
+      resizeThree();
+      renderer.domElement.addEventListener('pointerdown', onCanvasPointerDown);
+      renderer.domElement.addEventListener('pointermove', onCanvasPointerMove);
+      renderer.domElement.addEventListener('pointerup', onCanvasPointerUp);
+      renderer.domElement.addEventListener('pointercancel', resetPointer);
+      renderer.domElement.addEventListener('contextmenu', (event) => event.preventDefault());
+    }
+
+    function createParticles() {
+      const geo = geometry('spark', () => new T.OctahedronGeometry(.08, 0));
+      for (let i = 0; i < 80; i++) {
+        let mesh;
+        if(i<16) {
+          mesh=new T.Sprite(new T.SpriteMaterial({map:glowTexture,color:'#fff184',transparent:true,opacity:.75,blending:T.AdditiveBlending,depthWrite:false}));
+          mesh.isGlowSprite=true;
+        } else mesh = new T.Mesh(geo, material('#fff184', .4, .05, '#fff184', .4));
+        mesh.visible = false; mesh.life = 0; mesh.maxLife = 1;
+        mesh.vx = 0; mesh.vy = 0; mesh.vz = 0; mesh.spin = 0;
+        world.add(mesh); particlePool.push(mesh);
+      }
+    }
+    let glowTexture=null;
+    function createGlowTexture() {
+      const canvas=document.createElement('canvas'); canvas.width=64; canvas.height=64;
+      const ctx=canvas.getContext('2d'), gradient=ctx.createRadialGradient(32,32,0,32,32,32);
+      gradient.addColorStop(0,'rgba(255,255,255,1)'); gradient.addColorStop(.2,'rgba(255,255,255,.85)'); gradient.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.fillStyle=gradient; ctx.fillRect(0,0,64,64); glowTexture=new T.CanvasTexture(canvas); glowTexture.encoding=T.sRGBEncoding;
+    }
+    function createDamagePool() {
+      for (let i = 0; i < 20; i++) {
+        const el = document.createElement('span');
+        el.className = 'damage-label';
+        $('damageLayer').appendChild(el);
+        damagePool.push({ element: el, vector: new T.Vector3(), x: 0, y: 0, z: 0, rise: 0, life: 0, maxLife: 1, active: false });
+      }
+    }
+    function createShowcase() {
+      const ring = new T.Mesh(geometry('showcase-ring', () => new T.TorusGeometry(1.55, .09, 6, 32)), new T.MeshStandardMaterial({
+        color: '#fff171', emissive: '#ffcf42', emissiveIntensity: .35, metalness: .18, roughness: .36
+      }));
+      ring.rotation.x = Math.PI / 2; ring.position.y = -.22; showcaseGroup.add(ring);
+      const ids = [8, 9, 5];
+      for (let i = 0; i < ids.length; i++) {
+        const visual = buildCharacter(ids[i]);
+        visual.scale.multiplyScalar(1.35);
+        visual.position.set((i - 1) * 1.25, -.02, i === 1 ? -.25 : .4);
+        visual.rotation.y = Math.PI;
+        showcaseGroup.add(visual);
+      }
+    }
+
+    function clearGroup(group) {
+      while (group.children.length) group.remove(group.children[0]);
+    }
+    function addCloud(x, y, z, scale, color) {
+      const cloud = new T.Group();
+      addSphere(cloud, color, [0, 0, 0], [scale, scale * .44, scale * .38], .94);
+      addSphere(cloud, color, [-scale * .45, scale * .12, 0], [scale * .48, scale * .38, scale * .34], .94);
+      addSphere(cloud, color, [scale * .42, scale * .08, .02], [scale * .43, scale * .34, scale * .33], .94);
+      cloud.position.set(x, y, z);
+      cloud.userData.startX = x;
+      cloud.userData.drift = .08 + Math.random() * .11;
+      decorGroup.add(cloud);
+    }
+    function buildArenaDecor(arena) {
+      clearGroup(decorGroup);
+      addSphere(decorGroup, arena.dark, [-5.2, -.25, -6.2], [3.2, 1.5, 1.5], .98);
+      addSphere(decorGroup, arena.floor, [5.1, -.32, -6.4], [3.1, 1.3, 1.6], .98);
+      addCloud(-3.7, 4.25, -6.3, .9, '#ffffff');
+      addCloud(3.1, 4.8, -7.0, .72, '#fffaf1');
+      addCloud(.1, 5.7, -8.4, 1.05, '#ffffff');
+
+      if (arena.scene === 'farm') {
+        addCylinder(decorGroup, '#f3e5c3', [-4.4, .55, -4.6], [.55, 1.7, .55]);
+        addCone(decorGroup, '#d55849', [-4.4, 1.52, -4.6], [.68, .55, .68]);
+        addBox(decorGroup, '#f9edcf', [4.4, .38, -4.8], [.75, 1.3, .75]);
+        addCone(decorGroup, '#b94c48', [4.4, 1.1, -4.8], [.62, .5, .62]);
+        for (let i = 0; i < 4; i++) addCone(decorGroup, '#71ae51', [-3.4 + i * 2.2, -.13, -5.15], [.28, .56, .28]);
+      } else if (arena.scene === 'beach') {
+        for (let i = 0; i < 2; i++) {
+          const x = i ? 4.5 : -4.6;
+          addCylinder(decorGroup, '#9b673e', [x, 1.1, -4.7], [.17, 2.8, .17], [0, 0, i ? -.12 : .12]);
+          for (let j = 0; j < 4; j++) addCone(decorGroup, '#39a96b', [x + Math.cos(j * Math.PI / 2) * .48, 2.43, -4.7 + Math.sin(j * Math.PI / 2) * .38], [.24, .95, .2], [0, 0, j * .3]);
+        }
+        addSphere(decorGroup, '#42c5d9', [0, -.27, -7.2], [7, .75, .7], .9);
+      } else if (arena.scene === 'desert') {
+        addCone(decorGroup, '#ca8a4b', [-3.7, .65, -5.4], [1.4, 2.1, 1.2], null, .98);
+        addCone(decorGroup, '#e0a252', [3.8, .45, -5.7], [1.1, 1.7, 1], null, .98);
+        addCylinder(decorGroup, '#448c53', [-4.4, .4, -4.5], [.22, 1.4, .22]);
+        addCylinder(decorGroup, '#448c53', [-4.7, .5, -4.5], [.18, .8, .18], [0, 0, Math.PI / 2]);
+      } else if (arena.scene === 'city') {
+        const hues = ['#685bbb', '#ed739e', '#458fbb', '#e3a75a'];
+        for (let i = 0; i < 5; i++) {
+          const x = -5 + i * 2.5;
+          const h = 1.4 + (i % 3) * .5;
+          addBox(decorGroup, hues[i % hues.length], [x, h * .48, -5.6], [1.1, h, .85], null, .68, .04);
+          addBox(decorGroup, '#ffe17c', [x, h * .57, -5.12], [.16, .2, .035], null, .35, .2);
+          addBox(decorGroup, '#aaf5ff', [x - .29, h * .33, -5.12], [.16, .2, .035], null, .35, .2);
+        }
+      } else if (arena.scene === 'volcano') {
+        addCone(decorGroup, '#472f42', [0, 1.25, -5.8], [3.5, 4.2, 2.9], null, .96);
+        addCone(decorGroup, '#ee5d43', [0, 2.2, -4.55], [.8, .2, .7], null, .42, .05);
+        for (let i = 0; i < 3; i++) addSphere(decorGroup, '#ff9a39', [-2.8 + i * 2.8, .1, -4.2], [.25, .12, .22], .35, .1);
+      } else {
+        for (let i = 0; i < 4; i++) {
+          const x = i < 2 ? -5.2 : 5.2;
+          const z = -5.1 - (i % 2) * 1.2;
+          addBox(decorGroup, '#e5edff', [x, 1.55, z], [.18, 3.4, .18], null, .38, .18);
+          addSphere(decorGroup, '#fff06a', [x, 3.38, z], [.34, .34, .34], .22, .15);
+        }
+        addSphere(decorGroup, '#fff387', [0, 3.2, -7.5], [2.3, .16, .14], .28, .2);
+      }
+    }
+
+    function setArenaTheme(index) {
+      currentArenaIndex = clamp(index, 0, ARENAS.length - 1);
+      const arena = ARENAS[currentArenaIndex];
+      document.documentElement.style.setProperty('--sky-a', arena.skyA);
+      document.documentElement.style.setProperty('--sky-b', arena.skyB);
+      document.documentElement.style.setProperty('--accent', arena.accent);
+      sceneElement.style.background = 'linear-gradient(160deg, ' + arena.skyA + ', ' + arena.skyB + ' 67%, ' + arena.floor + ')';
+      $('arenaNumber').textContent = 'ARENA ' + (currentArenaIndex + 1) + ' · ' + formatInteger(arena.minCups) + ' COPAS';
